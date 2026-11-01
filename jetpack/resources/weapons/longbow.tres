@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="WeaponResource" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/weapons/weapon_resource.gd" id="1"]
+
+[resource]
+script=ExtResource("1")
+display_name="Longbow"
+damage=50.0
+fire_rate=0.8
+spread_deg=0.4
+mag_size=5
+reserve=15
+projectile=0
+pellet_count=1
+zoom=2.5
+range=2000.0
