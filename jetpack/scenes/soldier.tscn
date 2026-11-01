@@ -30,3 +30,8 @@ stats = ExtResource("3")
 
 [node name="Muzzle" type="Marker2D" parent="Weapon"]
 position = Vector2(20, -32)
+
+[node name="ArcPreview" type="Line2D" parent="."]
+points = PackedVector2Array(0, -32, 10, -32)
+width = 2.0
+default_color = Color(1, 0.9, 0.3, 0.9)
