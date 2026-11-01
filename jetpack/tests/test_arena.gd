@@ -206,6 +206,7 @@ func run_tests() -> void:
 	root.remove_child(grey)
 	grey.queue_free()
 	await process_frame
+	await physics_frame
 
 	var match_inst := match_packed.instantiate() as Node2D
 	check(match_inst != null, "match instantiates Node2D")
@@ -216,14 +217,16 @@ func run_tests() -> void:
 	await process_frame
 
 	# Rebind arena reads to the live sim arena the soldier collides with.
-	grey = match_inst.get_node_or_null("Greybox") as Node2D
-	check(grey != null, "sim reuses match Greybox (no duplicate arena)")
-	if grey == null:
+	var arena := match_inst.get_node_or_null("Greybox") as Node2D
+	check(arena != null, "match Greybox present for sim")
+	if arena == null:
 		return
 	check(root.find_children("Greybox", "Node2D", true, false).size() == 1, "single Greybox arena during sim (got %d)" % root.find_children("Greybox", "Node2D", true, false).size())
 	var sim_bodies := root.find_children("*", "StaticBody2D", true, false).size()
-	var arena_bodies := grey.find_children("*", "StaticBody2D", true, false).size()
+	var arena_bodies := arena.find_children("*", "StaticBody2D", true, false).size()
 	check(sim_bodies == arena_bodies, "no doubled static bodies during sim (root=%d arena=%d)" % [sim_bodies, arena_bodies])
+	var ceilings := root.find_children("Ceiling", "StaticBody2D", true, false)
+	check(ceilings.size() == 1, "single Ceiling body during sim (got %d)" % ceilings.size())
 
 	var soldier := match_inst.get_node_or_null("Soldier") as CharacterBody2D
 	check(soldier != null, "match contains Soldier")
@@ -239,7 +242,7 @@ func run_tests() -> void:
 	check(soldier.is_on_floor(), "soldier rests on floor after 600 ticks")
 
 	# Ceiling-bounded climb: sustained thrust must stop at the ceiling.
-	var ceil_node := grey.get_node_or_null("Ceiling") as StaticBody2D
+	var ceil_node := arena.get_node_or_null("Ceiling") as StaticBody2D
 	var ceil_collision: CollisionShape2D = null
 	if ceil_node != null:
 		ceil_collision = ceil_node.get_node_or_null("Collision") as CollisionShape2D
