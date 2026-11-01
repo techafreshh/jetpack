@@ -8,6 +8,8 @@ a game server.
 """
 
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+import errno
+import sys
 
 HOST = "127.0.0.1"
 PORT = 8911
@@ -47,8 +49,19 @@ class ProbeHandler(BaseHTTPRequestHandler):
         pass
 
 
-def main() -> None:
-    server = ThreadingHTTPServer((HOST, PORT), ProbeHandler)
+def main() -> int:
+    try:
+        server = ThreadingHTTPServer((HOST, PORT), ProbeHandler)
+    except OSError as e:
+        if e.errno == errno.EADDRINUSE:
+            print(
+                "jetpack probe: cannot bind %s:%d: address already in use"
+                " (port held by another process?)" % (HOST, PORT),
+                file=sys.stderr,
+                flush=True,
+            )
+            return 1
+        raise
     print("JETPACK PROBE on http://%s:%d/health" % (HOST, PORT), flush=True)
     try:
         server.serve_forever()
@@ -56,7 +69,8 @@ def main() -> None:
         pass
     finally:
         server.server_close()
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
