@@ -64,13 +64,13 @@ size = Vector2(240, 24)
 size = Vector2(160, 120)
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_bunker_w_cap"]
-size = Vector2(200, 24)
+size = Vector2(160, 24)
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_bunker_e"]
 size = Vector2(160, 120)
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_bunker_e_cap"]
-size = Vector2(200, 24)
+size = Vector2(160, 24)
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_wall_l"]
 size = Vector2(80, 2600)
@@ -303,7 +303,7 @@ shape = SubResource("RectangleShape2D_bunker_w_cap")
 
 [node name="Visual" type="Polygon2D" parent="BunkerWCap"]
 color = Color(0.48, 0.48, 0.52, 1)
-polygon = PackedVector2Array(-100, -12, 100, -12, 100, 12, -100, 12)
+polygon = PackedVector2Array(-80, -12, 80, -12, 80, 12, -80, 12)
 
 [node name="BunkerE" type="StaticBody2D" parent="."]
 position = Vector2(1760, 340)
@@ -323,7 +323,7 @@ shape = SubResource("RectangleShape2D_bunker_e_cap")
 
 [node name="Visual" type="Polygon2D" parent="BunkerECap"]
 color = Color(0.48, 0.48, 0.52, 1)
-polygon = PackedVector2Array(-100, -12, 100, -12, 100, 12, -100, 12)
+polygon = PackedVector2Array(-80, -12, 80, -12, 80, 12, -80, 12)
 
 [node name="WallL" type="StaticBody2D" parent="."]
 position = Vector2(-880, -300)

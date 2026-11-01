@@ -162,6 +162,36 @@ func run_tests() -> void:
 			check(absf(gleft - float(gap_west[i])) <= 1.0, "%s left edge spans gap west %f (got %f)" % [gap_names[i], float(gap_west[i]), gleft])
 			check(absf(gright - float(gap_east[i])) <= 1.0, "%s right edge spans gap east %f (got %f)" % [gap_names[i], float(gap_east[i]), gright])
 
+	var bunker_blocks: Array = ["BunkerW", "BunkerE"]
+	var bunker_caps: Array = ["BunkerWCap", "BunkerECap"]
+	for i in 2:
+		var blk := grey.get_node_or_null(bunker_blocks[i]) as StaticBody2D
+		var cap := grey.get_node_or_null(bunker_caps[i]) as StaticBody2D
+		check(blk != null, "%s exists for cap-flush check" % bunker_blocks[i])
+		check(cap != null, "%s exists for cap-flush check" % bunker_caps[i])
+		if blk == null or cap == null:
+			continue
+		var blk_col := blk.get_node_or_null("Collision") as CollisionShape2D
+		var cap_col := cap.get_node_or_null("Collision") as CollisionShape2D
+		check(cap_col != null and cap_col.shape is RectangleShape2D, "%s has RectangleShape2D collision" % bunker_caps[i])
+		if blk_col == null or not (blk_col.shape is RectangleShape2D) or cap_col == null or not (cap_col.shape is RectangleShape2D):
+			continue
+		var blk_size := (blk_col.shape as RectangleShape2D).size
+		var cap_size := (cap_col.shape as RectangleShape2D).size
+		check(absf(cap_size.x - 160.0) <= 1.0 and absf(cap_size.y - 24.0) <= 1.0, "%s collision is 160x24 (got %s)" % [bunker_caps[i], str(cap_size)])
+		var blk_pos := (blk as Node2D).position
+		var cap_pos := (cap as Node2D).position
+		check(absf(cap_pos.x - blk_pos.x) <= 1.0, "%s centered on %s (cap x=%f block x=%f)" % [bunker_caps[i], bunker_blocks[i], cap_pos.x, blk_pos.x])
+		var cap_left := cap_pos.x - cap_size.x * 0.5
+		var cap_right := cap_pos.x + cap_size.x * 0.5
+		var blk_left := blk_pos.x - blk_size.x * 0.5
+		var blk_right := blk_pos.x + blk_size.x * 0.5
+		check(absf(cap_left - blk_left) <= 1.0, "%s left flush with %s left (cap=%f block=%f)" % [bunker_caps[i], bunker_blocks[i], cap_left, blk_left])
+		check(absf(cap_right - blk_right) <= 1.0, "%s right flush with %s right (cap=%f block=%f)" % [bunker_caps[i], bunker_blocks[i], cap_right, blk_right])
+		var cap_bottom := cap_pos.y + cap_size.y * 0.5
+		var blk_top := blk_pos.y - blk_size.y * 0.5
+		check(absf(cap_bottom - blk_top) <= 1.0, "%s bottom stacked on %s top (bottom=%f top=%f)" % [bunker_caps[i], bunker_blocks[i], cap_bottom, blk_top])
+
 	var fa := FileAccess.open("res://scenes/arena/greybox.tscn", FileAccess.READ)
 	if fa != null:
 		var text := fa.get_as_text()
