@@ -143,10 +143,12 @@ Differentiation vs. SKYSCRAP is deferred to post-MVP validation (signature mecha
 Godot 4.x, GDScript throughout (solo-dev velocity over C#); 2D `CharacterBody2D` actors; **command-based simulation** with a `Pilot` seam so the sim never reads raw input. Fixed physics tick (60 Hz); presentation (cameras, shake, particles) decoupled from simulation.
 
 ### Directory structure
+The repo root holds planning docs (`.agents/`) and the game project in a `jetpack/` subdirectory (issue #1's acceptance contract: `jetpack/project.godot`, headless import via `--path jetpack`):
 ```
-jetpack/
-├── project.godot            # input map, autoloads, web export preset
-├── docs/                    # brainstorm notes, tuning logs
+jetpack/                  # repo root
+├── .agents/              # PRD, vendored agent skills (planning layer)
+├── project.godot
+├── docs/                 # brainstorm notes, tuning logs
 ├── assets/
 │   ├── art/                 # Kenney/itch CC0 packs (sprites, tiles)
 │   └── audio/               # CC0 SFX + music
@@ -369,9 +371,8 @@ A stranger can open the itch.io page and complete ≥2 full matches voluntarily.
 - Reference game study: [SKYSCRAP](https://play.skyscrap.fun/) — maps, match rules, hold-to-confirm UI, accessibility toggles, bot difficulty ladder, online suite (FFA/TDM, Wi-Fi LAN beta, private rooms, parties, spectate)
 
 ### Operator checklist (NOT sliceable into issues — requires human with VPS/external-account access)
-1. **Build snapshot bake** (before the first lap): run `foreman bake jetpack` VPS-side so the `jetpack-base` snapshot contains Godot 4.7 + web export templates. Re-bake on engine upgrades.
+1. **Stack bases are factory-managed** (no per-repo bakes): Godot 4.7 stable + web export templates ship in the `godot-base` stack base (snapshot `factory-godot-r1`); check `factory-remote doctor` for the current alias map before assuming any snapshot name. Engine upgrades need a **new versioned bake** requested from the factory operator (boot from the shared base → apply only the stack delta → save `factory-godot-rN` and register the alias) — per-repo snapshots and bare-template re-provisioning are refused.
 2. **itch.io account + butler** (Phase 4): create the itch.io project page (hidden), install `butler`, run the upload — the factory delivers the export artifact + deploy instructions; the upload itself is operator-owned.
-3. **Engine upgrades**: version bumps re-require the snapshot re-bake (operator) before laps touching export/run.
 
 ### Key external references
 - [Godot 4.3+ web export (single-threaded, no SharedArrayBuffer)](https://godotengine.org/article/progress-report-web-export-in-4-3)
