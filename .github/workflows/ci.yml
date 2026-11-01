@@ -1,0 +1,62 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  godot:
+    name: Godot headless import + script check
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+
+      - name: Show Godot version
+        run: godot --version
+
+      - name: Headless import
+        run: |
+          set -eu
+          godot --headless --path jetpack --import >import.log 2>&1 || rc=$?
+          rc=${rc:-0}
+          cat import.log
+          if [ "$rc" -ne 0 ]; then
+            echo "godot --import failed with exit code $rc"
+            exit "$rc"
+          fi
+          if grep -Eq 'SCRIPT ERROR|Parse Error' import.log; then
+            echo "godot --import reported script errors"
+            exit 1
+          fi
+          echo "GODOT_IMPORT_OK"
+
+      - name: Validate GDScript files
+        timeout-minutes: 5
+        run: |
+          set -eu
+          fail=0
+          count=0
+          while IFS= read -r f; do
+            count=$((count + 1))
+            echo "--- checking $f"
+            out=""
+            rc=0
+            out="$(godot --headless --path jetpack --check-only --script "$PWD/$f" 2>&1)" || rc=$?
+            echo "$out"
+            if [ "$rc" -ne 0 ]; then
+              echo "FAIL(exit code $rc): $f"
+              fail=1
+            fi
+            if printf '%s\n' "$out" | grep -Eq 'SCRIPT ERROR|Parse Error'; then
+              echo "FAIL(error tokens): $f"
+              fail=1
+            fi
+          done < <(find jetpack -name '*.gd' -not -path '*/.godot/*' | sort)
+          echo "checked $count GDScript file(s)"
+          if [ "$count" -eq 0 ]; then
+            echo "no GDScript files found"
+            exit 1
+          fi
+          exit "$fail"
