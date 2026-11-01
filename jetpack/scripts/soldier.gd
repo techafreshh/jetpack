@@ -37,6 +37,7 @@ var grenade_count := 2
 var grenade_max := 2
 var hp := 100.0
 var max_hp := 100.0
+var slots: Array[String] = ["ranger_ar"]
 
 var fuel: float = 100.0
 var crouched: bool = false
@@ -112,6 +113,37 @@ func add_grenades(n: int) -> int:
 	grenade_count = mini(grenade_max, grenade_count + n)
 	_update_arc_preview()
 	return grenade_count
+
+
+func heal(amount: float) -> float:
+	hp = minf(max_hp, hp + amount)
+	return hp
+
+
+func add_weapon(id: String) -> bool:
+	var path := "res://resources/weapons/%s.tres" % id
+	if not ResourceLoader.exists(path):
+		return false
+	if not slots.has(id):
+		slots.append(id)
+	var res := load(path) as WeaponResource
+	if res == null:
+		return false
+	var weapon := get_node_or_null("Weapon")
+	if weapon != null and weapon.has_method("equip"):
+		weapon.call("equip", res)
+	return true
+
+
+func restock_ammo() -> void:
+	var weapon := get_node_or_null("Weapon")
+	if weapon == null:
+		return
+	var stats = weapon.get("stats")
+	if stats == null:
+		return
+	weapon.set("ammo", int(stats.get("mag_size")))
+	weapon.set("reserve_left", int(stats.get("reserve")))
 
 
 func throw_grenade() -> bool:
