@@ -48,6 +48,65 @@ func run_tests() -> void:
 	check(bodies.size() >= 10, "greybox has >=10 StaticBody2D (got %d)" % bodies.size())
 	check(grey.get_node_or_null("Spawn0") != null, "Spawn0 marker exists")
 
+	var tower_wall := grey.get_node_or_null("TowerWall") as StaticBody2D
+	check(tower_wall != null, "TowerWall exists for east-steps check")
+	var tower_cap := grey.get_node_or_null("TowerCap") as StaticBody2D
+	check(tower_cap != null, "TowerCap exists for east-steps check")
+	if tower_wall != null:
+		check(absf((tower_wall as Node2D).position.x - 2624.0) <= 1.0, "TowerWall x is 2624 mirror axis (got %f)" % (tower_wall as Node2D).position.x)
+		var wall_x := (tower_wall as Node2D).position.x
+		var west_names: Array = ["TowerStep0", "TowerStep1", "TowerStep2", "TowerStep3"]
+		var east_names: Array = ["TowerStepE0", "TowerStepE1", "TowerStepE2", "TowerStepE3"]
+		var expect_y: Array = [280.0, 160.0, 40.0, -80.0]
+		var expect_gap: Array = [244.0, 184.0, 124.0, 64.0]
+		var east_steps: Array = []
+		for i in 4:
+			var w := grey.get_node_or_null(west_names[i]) as StaticBody2D
+			var e := grey.get_node_or_null(east_names[i]) as StaticBody2D
+			check(w != null, "%s exists for mirror check" % west_names[i])
+			check(e != null, "%s exists east of TowerWall" % east_names[i])
+			if e == null:
+				continue
+			east_steps.append(e)
+			check(e is StaticBody2D, "%s is StaticBody2D" % east_names[i])
+			var epos := (e as Node2D).position
+			check(epos.x > wall_x + 24.0, "%s center sits east of wall face (x=%f wall=%f)" % [east_names[i], epos.x, wall_x])
+			if i < 3:
+				check(epos.x - 80.0 > wall_x + 24.0, "%s fully east of wall face (left=%f face=%f)" % [east_names[i], epos.x - 80.0, wall_x + 24.0])
+			else:
+				check(epos.x - 80.0 < wall_x + 24.0, "%s top step overlaps wall like west Step3 (left=%f face=%f)" % [east_names[i], epos.x - 80.0, wall_x + 24.0])
+			check(absf(epos.y - float(expect_y[i])) <= 1.0, "%s matches west height y=%f (got %f)" % [east_names[i], float(expect_y[i]), epos.y])
+			if w != null:
+				var wpos := (w as Node2D).position
+				check(absf((epos.x - wall_x) - (wall_x - wpos.x)) <= 1.0, "%s mirrors %s across x=2624 (e=%f w=%f)" % [east_names[i], west_names[i], epos.x, wpos.x])
+				check(absf((epos.x - wall_x) - float(expect_gap[i])) <= 1.0, "%s offset from wall is %f (got %f)" % [east_names[i], float(expect_gap[i]), epos.x - wall_x])
+				check(absf(wpos.y - epos.y) <= 1.0, "%s y matches %s y (%f vs %f)" % [east_names[i], west_names[i], epos.y, wpos.y])
+			var ecol := e.get_node_or_null("Collision") as CollisionShape2D
+			check(ecol != null and ecol.shape is RectangleShape2D, "%s has RectangleShape2D collision" % east_names[i])
+			if ecol != null and ecol.shape is RectangleShape2D:
+				var esize := (ecol.shape as RectangleShape2D).size
+				check(absf(esize.x - 160.0) <= 1.0 and absf(esize.y - 24.0) <= 1.0, "%s collision is 160x24 (got %s)" % [east_names[i], str(esize)])
+				if w != null:
+					var wcol := w.get_node_or_null("Collision") as CollisionShape2D
+					if wcol != null and wcol.shape is RectangleShape2D:
+						var wsize := (wcol.shape as RectangleShape2D).size
+						check(absf(esize.x - wsize.x) <= 1.0 and absf(esize.y - wsize.y) <= 1.0, "%s collision matches %s size" % [east_names[i], west_names[i]])
+		for i in range(1, east_steps.size()):
+			var prev := (east_steps[i - 1] as Node2D).position
+			var cur := (east_steps[i] as Node2D).position
+			check(absf((prev.y - cur.y) - 120.0) <= 1.0, "east rise %s->%s is 120px (got %f)" % [east_names[i - 1], east_names[i], prev.y - cur.y])
+			var overlap := minf(prev.x + 80.0, cur.x + 80.0) - maxf(prev.x - 80.0, cur.x - 80.0)
+			check(overlap >= 20.0, "east steps %s/%s overlap >=20px in x (got %f)" % [east_names[i - 1], east_names[i], overlap])
+		if tower_cap != null and east_steps.size() == 4:
+			var cap_pos := (tower_cap as Node2D).position
+			var cap_col := tower_cap.get_node_or_null("Collision") as CollisionShape2D
+			var cap_h := 24.0
+			if cap_col != null and cap_col.shape is RectangleShape2D:
+				cap_h = (cap_col.shape as RectangleShape2D).size.y
+			var cap_top := cap_pos.y - cap_h * 0.5
+			var e3_top := (east_steps[3] as Node2D).position.y - 12.0
+			check(e3_top > cap_top and (e3_top - cap_top) <= 100.0, "TowerStepE3 top within 100px below TowerCap top (e3=%f cap=%f)" % [e3_top, cap_top])
+
 	var ceiling := grey.get_node_or_null("Ceiling")
 	check(ceiling != null, "Ceiling node exists")
 	check(ceiling is StaticBody2D, "Ceiling is StaticBody2D")

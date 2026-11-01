@@ -1,4 +1,4 @@
-[gd_scene load_steps=21 format=3]
+[gd_scene load_steps=25 format=3]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_floor_a"]
 size = Vector2(1200, 80)
@@ -34,6 +34,18 @@ size = Vector2(160, 24)
 size = Vector2(160, 24)
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_tower_step_3"]
+size = Vector2(160, 24)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_tower_step_e0"]
+size = Vector2(160, 24)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_tower_step_e1"]
+size = Vector2(160, 24)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_tower_step_e2"]
+size = Vector2(160, 24)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_tower_step_e3"]
 size = Vector2(160, 24)
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_tower_cap"]
@@ -181,6 +193,46 @@ position = Vector2(2560, -80)
 shape = SubResource("RectangleShape2D_tower_step_3")
 
 [node name="Visual" type="Polygon2D" parent="TowerStep3"]
+color = Color(0.52, 0.52, 0.56, 1)
+polygon = PackedVector2Array(-80, -12, 80, -12, 80, 12, -80, 12)
+
+[node name="TowerStepE0" type="StaticBody2D" parent="."]
+position = Vector2(2868, 280)
+
+[node name="Collision" type="CollisionShape2D" parent="TowerStepE0"]
+shape = SubResource("RectangleShape2D_tower_step_e0")
+
+[node name="Visual" type="Polygon2D" parent="TowerStepE0"]
+color = Color(0.52, 0.52, 0.56, 1)
+polygon = PackedVector2Array(-80, -12, 80, -12, 80, 12, -80, 12)
+
+[node name="TowerStepE1" type="StaticBody2D" parent="."]
+position = Vector2(2808, 160)
+
+[node name="Collision" type="CollisionShape2D" parent="TowerStepE1"]
+shape = SubResource("RectangleShape2D_tower_step_e1")
+
+[node name="Visual" type="Polygon2D" parent="TowerStepE1"]
+color = Color(0.52, 0.52, 0.56, 1)
+polygon = PackedVector2Array(-80, -12, 80, -12, 80, 12, -80, 12)
+
+[node name="TowerStepE2" type="StaticBody2D" parent="."]
+position = Vector2(2748, 40)
+
+[node name="Collision" type="CollisionShape2D" parent="TowerStepE2"]
+shape = SubResource("RectangleShape2D_tower_step_e2")
+
+[node name="Visual" type="Polygon2D" parent="TowerStepE2"]
+color = Color(0.52, 0.52, 0.56, 1)
+polygon = PackedVector2Array(-80, -12, 80, -12, 80, 12, -80, 12)
+
+[node name="TowerStepE3" type="StaticBody2D" parent="."]
+position = Vector2(2688, -80)
+
+[node name="Collision" type="CollisionShape2D" parent="TowerStepE3"]
+shape = SubResource("RectangleShape2D_tower_step_e3")
+
+[node name="Visual" type="Polygon2D" parent="TowerStepE3"]
 color = Color(0.52, 0.52, 0.56, 1)
 polygon = PackedVector2Array(-80, -12, 80, -12, 80, 12, -80, 12)
 
