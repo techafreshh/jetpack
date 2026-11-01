@@ -39,6 +39,60 @@ class ProbeServerTest(unittest.TestCase):
         finally:
             conn.close()
 
+    def raw_post(self, content_length: str):
+        req = (
+            "POST %s HTTP/1.1\r\n"
+            "Host: 127.0.0.1\r\n"
+            "Content-Length: %s\r\n"
+            "Connection: close\r\n"
+            "\r\n"
+        ) % (HEALTH_PATH, content_length)
+        start = time.monotonic()
+        s = socket.create_connection(("127.0.0.1", self.port), timeout=5)
+        try:
+            s.settimeout(5)
+            s.sendall(req.encode("ascii"))
+            chunks = []
+            while True:
+                try:
+                    data = s.recv(65536)
+                except socket.timeout:
+                    break
+                if not data:
+                    break
+                chunks.append(data)
+        finally:
+            s.close()
+        return time.monotonic() - start, b"".join(chunks)
+
+    def test_post_negative_content_length_responds_quickly(self) -> None:
+        elapsed, raw = self.raw_post("-1")
+        self.assertLess(elapsed, 3, "negative Content-Length blocked handler")
+        self.assertIn(b"200", raw.split(b"\r\n", 1)[0])
+        self.assertTrue(raw.endswith(HEALTH_BODY), raw)
+        self.assertNotIn(b"Traceback", raw)
+
+    def test_post_huge_content_length_responds_quickly(self) -> None:
+        elapsed, raw = self.raw_post("99999999999")
+        self.assertLess(elapsed, 3, "huge Content-Length blocked handler")
+        self.assertIn(b"200", raw.split(b"\r\n", 1)[0])
+        self.assertTrue(raw.endswith(HEALTH_BODY), raw)
+        self.assertNotIn(b"Traceback", raw)
+
+    def test_post_small_lie_content_length_responds_quickly(self) -> None:
+        elapsed, raw = self.raw_post("16")
+        self.assertLess(elapsed, 3, "small-lie Content-Length blocked handler")
+        self.assertIn(b"200", raw.split(b"\r\n", 1)[0])
+        self.assertTrue(raw.endswith(HEALTH_BODY), raw)
+        self.assertNotIn(b"Traceback", raw)
+
+    def test_handler_alive_after_bogus_lengths(self) -> None:
+        for bogus in ("-1", "99999999999", "16"):
+            self.raw_post(bogus)
+        status, _, body = self.request("GET", HEALTH_PATH)
+        self.assertEqual(status, 200)
+        self.assertEqual(body, HEALTH_BODY)
+
     def test_get_health(self) -> None:
         status, headers, body = self.request("GET", HEALTH_PATH)
         self.assertEqual(status, 200)

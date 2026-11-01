@@ -9,12 +9,14 @@ a game server.
 
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import errno
+import select
 import sys
 
 HOST = "127.0.0.1"
 PORT = 8911
 HEALTH_PATH = "/health"
 HEALTH_BODY = b"OK JETPACK"
+MAX_POST_BODY = 64 * 1024
 
 
 class ProbeHandler(BaseHTTPRequestHandler):
@@ -38,11 +40,25 @@ class ProbeHandler(BaseHTTPRequestHandler):
 
     def do_POST(self) -> None:
         length = self.headers.get("Content-Length")
-        if length:
+        try:
+            n = int(str(length).strip())
+        except (ValueError, AttributeError):
+            n = 0
+        remaining = min(max(n, 0), MAX_POST_BODY)
+        while remaining > 0:
             try:
-                self.rfile.read(int(length))
-            except ValueError:
-                pass
+                ready, _, _ = select.select([self.connection], [], [], 0)
+            except OSError:
+                break
+            if not ready:
+                break
+            try:
+                chunk = self.rfile.read(min(remaining, 65536))
+            except OSError:
+                break
+            if not chunk:
+                break
+            remaining -= len(chunk)
         self._serve_health(include_body=True)
 
     def log_message(self, format: str, *args: object) -> None:
