@@ -5,6 +5,7 @@ extends CharacterBody2D
 
 const CONFIG_PATH := "res://resources/config/movement.cfg"
 const GRENADE_CONFIG_PATH := "res://resources/config/grenade.cfg"
+const SPAWN_CONFIG_PATH := "res://resources/config/spawns.cfg"
 const GRENADE_SCENE := preload("res://scenes/grenade.tscn")
 const MAX_GRENADES := 2
 const CHEST_OFFSET := Vector2(0, -32)
@@ -37,13 +38,21 @@ var grenade_count := 2
 var grenade_max := 2
 var hp := 100.0
 var max_hp := 100.0
+var is_alive := true
+var respawn_ticks_left := 0
 var slots: Array[String] = ["ranger_ar"]
+
+signal died
+signal health_changed(hp: float, max_hp: float)
+signal respawned
 
 var fuel: float = 100.0
 var crouched: bool = false
 var thrusting: bool = false
 
 var _stand_h: float = 64.0
+var _saved_layer := 1
+var _saved_mask := 1
 
 @onready var _body: CollisionShape2D = $Body
 @onready var _head_check: RayCast2D = $HeadCheck
@@ -54,6 +63,8 @@ var _stand_h: float = 64.0
 func _ready() -> void:
 	_load_config()
 	add_to_group("damageable")
+	_saved_layer = collision_layer
+	_saved_mask = collision_mask
 	# Never mutate the shared sub-resource when crouch-resizing.
 	if _body.shape != null:
 		_body.shape = _body.shape.duplicate()
@@ -63,6 +74,12 @@ func _ready() -> void:
 
 
 func _physics_process(delta: float) -> void:
+	if not is_alive:
+		respawn_ticks_left -= 1
+		if respawn_ticks_left <= 0:
+			respawn_ticks_left = 0
+			_respawn()
+		return
 	var was_floor := is_on_floor()
 
 	# Crouch first so height and speed mult apply to the rest of the tick.
@@ -102,7 +119,12 @@ func _physics_process(delta: float) -> void:
 
 
 func take_damage(amount: float) -> void:
-	hp = maxf(0.0, hp - amount)
+	if not is_alive:
+		return
+	hp = Health.apply_damage(hp, amount)
+	health_changed.emit(hp, max_hp)
+	if hp <= 0.0:
+		_die()
 
 
 func apply_knockback(impulse: Vector2) -> void:
@@ -116,8 +138,54 @@ func add_grenades(n: int) -> int:
 
 
 func heal(amount: float) -> float:
-	hp = minf(max_hp, hp + amount)
+	hp = Health.heal_to(hp, max_hp, amount)
 	return hp
+
+
+func respawn_seconds_left() -> float:
+	return float(respawn_ticks_left) / 60.0
+
+
+func _die() -> void:
+	is_alive = false
+	respawn_ticks_left = _respawn_delay_ticks()
+	velocity = Vector2.ZERO
+	collision_layer = 0
+	collision_mask = 0
+	died.emit()
+	print("SOLDIER DIED")
+
+
+func _respawn() -> void:
+	var point := global_position
+	var spawner := get_tree().get_first_node_in_group("spawner") if get_tree() != null else null
+	if spawner != null and spawner.has_method("spawn_points") and spawner.has_method("live_enemy_positions"):
+		var points: Array = spawner.call("spawn_points")
+		var enemies: Array = spawner.call("live_enemy_positions", self)
+		var pts: Array[Vector2] = []
+		for p in points:
+			pts.append(p as Vector2)
+		var foes: Array[Vector2] = []
+		for e in enemies:
+			foes.append(e as Vector2)
+		var idx := Spawner.choose_spawn(pts, foes)
+		if idx >= 0 and idx < pts.size():
+			point = pts[idx]
+	global_position = point
+	hp = max_hp
+	velocity = Vector2.ZERO
+	collision_layer = _saved_layer
+	collision_mask = _saved_mask
+	is_alive = true
+	respawned.emit()
+	print("SOLDIER RESPAWNED")
+
+
+func _respawn_delay_ticks() -> int:
+	var cfg := ConfigFile.new()
+	if cfg.load(SPAWN_CONFIG_PATH) != OK:
+		return Health.RESPAWN_TICKS
+	return int(cfg.get_value("respawn", "delay_ticks", Health.RESPAWN_TICKS))
 
 
 func add_weapon(id: String) -> bool:
@@ -147,6 +215,8 @@ func restock_ammo() -> void:
 
 
 func throw_grenade() -> bool:
+	if not is_alive:
+		return false
 	if grenade_count <= 0:
 		return false
 	grenade_count -= 1
