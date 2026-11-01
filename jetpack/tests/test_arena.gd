@@ -137,6 +137,31 @@ func run_tests() -> void:
 			check(absf(ceil_bottom - wall_top) <= 40.0, "Ceiling bottom flush with wall tops (bottom=%f top=%f)" % [ceil_bottom, wall_top])
 			check(ceil_size.x >= wall_r_outer - wall_l_outer, "Ceiling covers wall-to-wall width")
 
+	var gap_names: Array = ["FloorGap0", "FloorGap1", "FloorGap2"]
+	var gap_centers: Array = [460.0, 1260.0, 2260.0]
+	var gap_west: Array = [400.0, 1200.0, 2200.0]
+	var gap_east: Array = [520.0, 1320.0, 2320.0]
+	for i in 3:
+		var gap := grey.get_node_or_null(gap_names[i]) as StaticBody2D
+		check(gap != null, "%s exists closing floor gap" % gap_names[i])
+		if gap == null:
+			continue
+		check(gap is StaticBody2D, "%s is StaticBody2D" % gap_names[i])
+		var gpos := (gap as Node2D).position
+		check(absf(gpos.x - float(gap_centers[i])) <= 1.0, "%s center x is %f (got %f)" % [gap_names[i], float(gap_centers[i]), gpos.x])
+		check(absf(gpos.y - 440.0) <= 1.0, "%s center y is 440 (got %f)" % [gap_names[i], gpos.y])
+		var gcol := gap.get_node_or_null("Collision") as CollisionShape2D
+		check(gcol != null and gcol.shape is RectangleShape2D, "%s has RectangleShape2D collision" % gap_names[i])
+		if gcol != null and gcol.shape is RectangleShape2D:
+			var gsize := (gcol.shape as RectangleShape2D).size
+			check(absf(gsize.x - 120.0) <= 1.0 and absf(gsize.y - 80.0) <= 1.0, "%s collision is 120x80 (got %s)" % [gap_names[i], str(gsize)])
+			var gtop := gpos.y - gsize.y * 0.5
+			check(absf(gtop - 400.0) <= 1.0, "%s top face flush at y=400 (got %f)" % [gap_names[i], gtop])
+			var gleft := gpos.x - gsize.x * 0.5
+			var gright := gpos.x + gsize.x * 0.5
+			check(absf(gleft - float(gap_west[i])) <= 1.0, "%s left edge spans gap west %f (got %f)" % [gap_names[i], float(gap_west[i]), gleft])
+			check(absf(gright - float(gap_east[i])) <= 1.0, "%s right edge spans gap east %f (got %f)" % [gap_names[i], float(gap_east[i]), gright])
+
 	var fa := FileAccess.open("res://scenes/arena/greybox.tscn", FileAccess.READ)
 	if fa != null:
 		var text := fa.get_as_text()
@@ -196,3 +221,62 @@ func run_tests() -> void:
 	Input.action_release("fly")
 	check(touched_ceiling, "sustained thrust contacts ceiling (is_on_ceiling)")
 	check(min_y >= ceil_bottom + soldier_h - 100.0, "climb stopped by ceiling (min y=%f floor=%f)" % [min_y, ceil_bottom + soldier_h - 100.0])
+
+	# Floor-gap run crossings: each filler restores walkable continuity.
+	var run_starts: Array = [300.0, 1100.0, 2100.0]
+	var run_targets: Array = [540.0, 1340.0, 2340.0]
+	for i in 3:
+		soldier.position = Vector2(float(run_starts[i]), 360.0)
+		soldier.velocity = Vector2.ZERO
+		Input.action_release("fly")
+		await process_frame
+		await physics_frame
+		for s in 60:
+			if soldier.is_on_floor():
+				break
+			await physics_frame
+		Input.action_press("move_right")
+		var lo_y: float = soldier.position.y
+		var hi_y: float = soldier.position.y
+		for t in 180:
+			await physics_frame
+			lo_y = minf(lo_y, soldier.position.y)
+			hi_y = maxf(hi_y, soldier.position.y)
+		Input.action_release("move_right")
+		for s in 10:
+			await physics_frame
+		check(soldier.position.x > float(run_targets[i]), "run crosses gap %d past east edge (x=%f target=%f)" % [i, soldier.position.x, float(run_targets[i])])
+		check(lo_y >= 360.0 and hi_y <= 440.0, "run over gap %d stays on floor-top y in [360,440] (lo=%f hi=%f)" % [i, lo_y, hi_y])
+		check(soldier.is_on_floor(), "soldier on floor after gap %d run crossing" % i)
+
+	# Flight hop over the middle gap still works and gains height.
+	soldier.position = Vector2(1100.0, 360.0)
+	soldier.velocity = Vector2.ZERO
+	await process_frame
+	await physics_frame
+	var hop_start_y: float = soldier.position.y
+	var hop_min_y: float = soldier.position.y
+	Input.action_press("fly")
+	Input.action_press("move_right")
+	for t in 180:
+		soldier.set("fuel", float(soldier.get("fuel_max")))
+		await physics_frame
+		hop_min_y = minf(hop_min_y, soldier.position.y)
+	Input.action_release("fly")
+	Input.action_release("move_right")
+	check(soldier.position.x > 1340.0, "flight hop crosses middle gap (x=%f)" % soldier.position.x)
+	check(hop_min_y <= hop_start_y - 20.0, "flight hop gains height over gap (min y=%f start=%f)" % [hop_min_y, hop_start_y])
+
+	# BunkerW still blocks pure run, so flight keeps meaning for tuning.
+	soldier.position = Vector2(700.0, 360.0)
+	soldier.velocity = Vector2.ZERO
+	Input.action_release("fly")
+	await process_frame
+	await physics_frame
+	Input.action_press("move_right")
+	var bunker_max_x: float = soldier.position.x
+	for t in 300:
+		await physics_frame
+		bunker_max_x = maxf(bunker_max_x, soldier.position.x)
+	Input.action_release("move_right")
+	check(bunker_max_x < 980.0, "BunkerW blocks pure run (max x=%f)" % bunker_max_x)
