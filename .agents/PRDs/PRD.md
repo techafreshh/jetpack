@@ -332,7 +332,7 @@ A stranger can open the itch.io page and complete ≥2 full matches voluntarily.
 - [ ] Accessibility toggles + settings persistence on web
 - [ ] Main menu, how-to-play, contextual first-match tips
 - [ ] Size/perf budget pass; headless export clean
-- [ ] itch.io hidden page deployed; playtest feedback loop running
+- [ ] itch.io deploy artifact produced (web export zip) + step-by-step upload instructions written — creating the hidden itch page and running butler are operator steps, out of factory scope (see Operator checklist)
 **Validation:** Success criteria §11 all checked; first 3 external playtesters complete ≥2 matches.
 
 *Total estimate: 5–8 weeks part-time solo.*
