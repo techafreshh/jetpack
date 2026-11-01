@@ -366,3 +366,15 @@ position = Vector2(2624, -240)
 
 [node name="Spawn3" type="Marker2D" parent="."]
 position = Vector2(800, -30)
+
+[node name="Spawn4" type="Marker2D" parent="."]
+position = Vector2(600, 300)
+
+[node name="Spawn5" type="Marker2D" parent="."]
+position = Vector2(1100, 300)
+
+[node name="Spawn6" type="Marker2D" parent="."]
+position = Vector2(2100, 300)
+
+[node name="Spawn7" type="Marker2D" parent="."]
+position = Vector2(3000, 300)
