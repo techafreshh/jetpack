@@ -19,6 +19,7 @@ var _base_color := Color(1.0, 0.55, 0.15, 1.0)
 
 
 func _ready() -> void:
+	add_to_group("damageable")
 	hp = max_hp
 	if _visual != null:
 		_base_color = _visual.color
