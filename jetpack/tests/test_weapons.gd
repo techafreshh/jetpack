@@ -75,6 +75,7 @@ func run_tests() -> void:
 		check(bool(w.call("can_fire")), "fresh mag can_fire")
 		var mag: int = int(res.get("mag_size"))
 		for s in mag:
+			w.set("_cooldown", 0.0)
 			check(bool(w.call("consume_shot")), "consume_shot succeeds while ammo lasts")
 		check(int(w.get("ammo")) == 0, "consume_shot drains mag to empty")
 		check(not bool(w.call("consume_shot")), "consume_shot fails when empty")
@@ -83,6 +84,7 @@ func run_tests() -> void:
 		check(bool(w.call("reload")), "reload succeeds with reserve")
 		check(int(w.get("ammo")) == mag, "reload refills mag")
 		check(int(w.get("reserve_left")) == reserve_before - mag, "reload transfers from reserve")
+		w.set("_cooldown", 0.0)
 		check(bool(w.call("can_fire")), "refilled mag can_fire")
 		check(not bool(w.call("reload")), "reload fails when mag full")
 		w.free()
@@ -95,6 +97,24 @@ func run_tests() -> void:
 		check(not bool(bare.call("reload")), "null stats reload fails")
 		check_close(float(bare.call("get_zoom")), 1.0, 0.001, "null stats zoom is 1.0")
 		bare.free()
+
+	# Direct-API cooldown: consume_shot owns the rate gate.
+	var cd = make_weapon()
+	if cd != null:
+		cd.call("equip", ranger)
+		check(bool(cd.call("can_fire")), "fresh equip can_fire")
+		var mag_full: int = int(cd.get("ammo"))
+		check(bool(cd.call("consume_shot")), "first consume_shot succeeds")
+		check(int(cd.get("ammo")) == mag_full - 1, "first shot decrements ammo once")
+		check(not bool(cd.call("consume_shot")), "second immediate consume_shot blocked by cooldown")
+		check(int(cd.get("ammo")) == mag_full - 1, "blocked shot leaves ammo unchanged")
+		check(not bool(cd.call("can_fire")), "can_fire false while cooldown armed")
+		cd.set("_cooldown", 0.0)
+		check(bool(cd.call("can_fire")), "gate re-opens after cooldown reset")
+		check(bool(cd.call("consume_shot")), "consume_shot succeeds after cooldown reset")
+		cd.call("equip", ranger)
+		check(bool(cd.call("can_fire")), "equip clears the gate")
+		cd.free()
 
 	# (c) No per-gun name branches in weapon scripts.
 	var names := ["Ranger", "Scatter", "Longbow"]
