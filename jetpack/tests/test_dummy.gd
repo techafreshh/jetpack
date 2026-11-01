@@ -5,6 +5,8 @@ extends SceneTree
 ## >=10 live Line2D tracers at tick 60.
 ## Run: godot --headless --path jetpack --script res://tests/test_dummy.gd
 
+const EXPLOSION_SCRIPT := preload("res://scripts/fx/explosion.gd")
+
 var passed := 0
 var failed := 0
 
@@ -21,6 +23,10 @@ func check(cond: bool, label: String) -> void:
 	else:
 		failed += 1
 		push_error("FAIL " + label)
+
+
+func check_close(actual: float, expected: float, tol: float, label: String) -> void:
+	check(absf(actual - expected) <= tol, "%s (expected ~%f, got %f)" % [label, expected, actual])
 
 
 func wait_physics(n: int) -> void:
@@ -42,6 +48,7 @@ func run_tests() -> void:
 	root.add_child(dummy)
 	await process_frame
 	await process_frame
+	check(dummy.is_in_group("damageable"), "dummy joins damageable group")
 
 	# Kill contract: 10 shots at 12 dmg drop a 100 HP dummy, one died signal.
 	var died_count := [0]
@@ -66,6 +73,37 @@ func run_tests() -> void:
 	var visual := flash_dummy.get_node("Visual") as Polygon2D
 	check(float(flash_dummy.get("flash_t")) > 0.0, "hit arms flash_t (got %f)" % float(flash_dummy.get("flash_t")))
 	check(visual != null and (visual.modulate == Color.WHITE or visual.color == Color.WHITE), "hit whitens dummy visual")
+
+	# Blast contract: radial blasts hit dummies in the damageable group.
+	var blast_dummy := dummy_packed.instantiate() as StaticBody2D
+	root.add_child(blast_dummy)
+	await process_frame
+	await process_frame
+	var blast_centre := Vector2(2000, -500)
+	blast_dummy.global_position = blast_centre
+	var boom := EXPLOSION_SCRIPT.new() as Node2D
+	root.add_child(boom)
+	boom.global_position = blast_centre
+	var radius: float = boom.get("blast_radius")
+	var max_dmg: float = boom.get("max_damage")
+	var hp0 := float(blast_dummy.get("hp"))
+	boom.call("detonate")
+	var hp1 := float(blast_dummy.get("hp"))
+	check(hp1 < hp0, "centre blast damages dummy (hp %f -> %f)" % [hp0, hp1])
+	check_close(hp1, hp0 - max_dmg, 1.0, "centre blast deals full max_damage")
+	boom.queue_free()
+	var far_dummy := dummy_packed.instantiate() as StaticBody2D
+	root.add_child(far_dummy)
+	await process_frame
+	await process_frame
+	far_dummy.global_position = blast_centre + Vector2(radius + 50.0, 0.0)
+	var boom2 := EXPLOSION_SCRIPT.new() as Node2D
+	root.add_child(boom2)
+	boom2.global_position = blast_centre
+	var far_hp0 := float(far_dummy.get("hp"))
+	boom2.call("detonate")
+	check(float(far_dummy.get("hp")) == far_hp0, "out-of-radius blast spares dummy (hp=%f)" % float(far_dummy.get("hp")))
+	boom2.queue_free()
 
 	# Tracer volume: hold fire 60 physics ticks, >=10 live Line2D at tick 60.
 	var soldier_packed := load("res://scenes/soldier.tscn") as PackedScene
