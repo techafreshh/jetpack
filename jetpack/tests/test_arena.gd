@@ -106,6 +106,27 @@ func run_tests() -> void:
 			var cap_top := cap_pos.y - cap_h * 0.5
 			var e3_top := (east_steps[3] as Node2D).position.y - 12.0
 			check(e3_top > cap_top and (e3_top - cap_top) <= 100.0, "TowerStepE3 top within 100px below TowerCap top (e3=%f cap=%f)" % [e3_top, cap_top])
+			check(cap_col != null and cap_col.shape is RectangleShape2D, "TowerCap has RectangleShape2D collision")
+			if cap_col != null and cap_col.shape is RectangleShape2D:
+				var cap_size := (cap_col.shape as RectangleShape2D).size
+				check(absf(cap_size.x - 160.0) <= 1.0 and absf(cap_size.y - 24.0) <= 1.0, "TowerCap collision is 160x24 (got %s)" % str(cap_size))
+				check(absf(cap_pos.x - wall_x) <= 1.0, "TowerCap centered on tower axis (cap x=%f wall=%f)" % [cap_pos.x, wall_x])
+				var wall_top := (tower_wall as Node2D).position.y - 280.0
+				var cap_bottom := cap_pos.y + cap_size.y * 0.5
+				check(absf(cap_bottom - wall_top) <= 1.0, "TowerCap bottom stacked on TowerWall top (bottom=%f top=%f)" % [cap_bottom, wall_top])
+				var cap_left := cap_pos.x - cap_size.x * 0.5
+				var cap_right := cap_pos.x + cap_size.x * 0.5
+				check(absf(cap_left - (wall_x - 80.0)) <= 1.0, "TowerCap left flush with 160 step width (left=%f expect=%f)" % [cap_left, wall_x - 80.0])
+				check(absf(cap_right - (wall_x + 80.0)) <= 1.0, "TowerCap right flush with 160 step width (right=%f expect=%f)" % [cap_right, wall_x + 80.0])
+			var cap_vis := tower_cap.get_node_or_null("Visual") as Polygon2D
+			check(cap_vis != null, "TowerCap Visual exists for flush check")
+			if cap_vis != null:
+				var min_x := INF
+				var max_x := -INF
+				for p in cap_vis.polygon:
+					min_x = minf(min_x, p.x)
+					max_x = maxf(max_x, p.x)
+				check(absf(max_x - 80.0) <= 1.0 and absf(min_x + 80.0) <= 1.0, "TowerCap visual is +-80 flush (min=%f max=%f)" % [min_x, max_x])
 
 	var ceiling := grey.get_node_or_null("Ceiling")
 	check(ceiling != null, "Ceiling node exists")
