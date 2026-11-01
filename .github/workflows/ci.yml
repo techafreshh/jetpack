@@ -40,6 +40,18 @@ jobs:
           fi
           echo "GODOT_IMPORT_OK"
 
+      - name: Check UID sidecars clean
+        run: |
+          set -eu
+          git status --porcelain -- '*.uid' >uid-status.log 2>&1 || true
+          cat uid-status.log
+          if [ -s uid-status.log ]; then
+            echo "godot --import left untracked or modified *.uid sidecars:"
+            cat uid-status.log
+            exit 1
+          fi
+          echo "GODOT_UID_CLEAN_OK"
+
       - name: Validate GDScript files
         timeout-minutes: 5
         run: |

@@ -2,3 +2,8 @@
 *.tmp
 build/
 __pycache__/
+# Godot 4.7 generates a *.uid sidecar next to every .gd script on --import.
+# These sidecars are intentionally committed (per upstream guidance: commit
+# *.uid, ignore only .godot/) so fresh clones and CI share stable UIDs.
+# Do NOT add *.uid to this file. When adding a new script, `git add` its
+# .uid sidecar alongside the .gd file.
