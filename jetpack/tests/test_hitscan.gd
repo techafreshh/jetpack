@@ -1,7 +1,7 @@
 extends SceneTree
 ## Headless behavior tests for the hitscan prototype and target dummies:
 ## 10x12 damage kills a 100 HP dummy, death signals once, hits flash, and a
-## 1 s hold leaves >=8 live Line2D tracers at tick 60.
+## 1 s hold leaves >=10 live Line2D tracers at tick 60.
 ## Run: godot --headless --path jetpack --script res://tests/test_hitscan.gd
 
 var passed := 0
@@ -66,7 +66,7 @@ func run_tests() -> void:
 	check(float(flash_dummy.get("flash_t")) > 0.0, "hit arms flash_t (got %f)" % float(flash_dummy.get("flash_t")))
 	check(visual != null and (visual.modulate == Color.WHITE or visual.color == Color.WHITE), "hit whitens dummy visual")
 
-	# Tracer volume: hold fire 60 physics ticks, >=8 live Line2D at tick 60.
+	# Tracer volume: hold fire 60 physics ticks, >=10 live Line2D at tick 60.
 	var soldier_packed := load("res://scenes/soldier.tscn") as PackedScene
 	check(soldier_packed != null, "soldier.tscn loads as PackedScene")
 	if soldier_packed == null:
@@ -83,5 +83,5 @@ func run_tests() -> void:
 	Input.action_press("fire")
 	await wait_physics(60)
 	var tracers := root.find_children("*", "Line2D", true, false)
-	check(tracers.size() >= 8, "1 s hold leaves >=8 live tracers (got %d)" % tracers.size())
+	check(tracers.size() >= 10, "1 s hold leaves >=10 live tracers (got %d)" % tracers.size())
 	Input.action_release("fire")
