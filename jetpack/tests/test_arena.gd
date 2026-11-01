@@ -171,6 +171,12 @@ func run_tests() -> void:
 	else:
 		check(false, "greybox.tscn readable via FileAccess")
 
+	# Sim phase uses the match-owned arena only: detach the static-phase
+	# greybox so StaticBody2D instances are not doubled at the same origin.
+	root.remove_child(grey)
+	grey.queue_free()
+	await process_frame
+
 	var match_inst := match_packed.instantiate() as Node2D
 	check(match_inst != null, "match instantiates Node2D")
 	if match_inst == null:
@@ -178,6 +184,16 @@ func run_tests() -> void:
 	root.add_child(match_inst)
 	await process_frame
 	await process_frame
+
+	# Rebind arena reads to the live sim arena the soldier collides with.
+	grey = match_inst.get_node_or_null("Greybox") as Node2D
+	check(grey != null, "sim reuses match Greybox (no duplicate arena)")
+	if grey == null:
+		return
+	check(root.find_children("Greybox", "Node2D", true, false).size() == 1, "single Greybox arena during sim (got %d)" % root.find_children("Greybox", "Node2D", true, false).size())
+	var sim_bodies := root.find_children("*", "StaticBody2D", true, false).size()
+	var arena_bodies := grey.find_children("*", "StaticBody2D", true, false).size()
+	check(sim_bodies == arena_bodies, "no doubled static bodies during sim (root=%d arena=%d)" % [sim_bodies, arena_bodies])
 
 	var soldier := match_inst.get_node_or_null("Soldier") as CharacterBody2D
 	check(soldier != null, "match contains Soldier")
