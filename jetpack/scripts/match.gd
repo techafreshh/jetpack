@@ -1,7 +1,8 @@
 extends Node2D
 ## Match host: instances the greybox arena with a pre-spawned soldier and
-## seats the soldier via the spawner (no-enemy pick) on ready. No rules,
-## scoring, or kill logic.
+## seats the soldier via the spawner (no-enemy pick) on ready. Seating only:
+## fall deaths below the kill-plane are enforced by the soldier via KILL_Y.
+## No scoring.
 
 var _spawner: Spawner
 
