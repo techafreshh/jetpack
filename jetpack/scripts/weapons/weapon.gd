@@ -37,8 +37,19 @@ func equip(r: WeaponResource) -> void:
 	reserve_left = stats.reserve
 
 
+func _host_alive() -> bool:
+	var parent := get_parent()
+	if parent == null:
+		return true
+	if parent.has_method("get") and "is_alive" in parent:
+		return bool(parent.get("is_alive"))
+	return true
+
+
 func can_fire() -> bool:
 	if stats == null:
+		return false
+	if not _host_alive():
 		return false
 	if ammo <= 0:
 		return false
@@ -47,6 +58,8 @@ func can_fire() -> bool:
 
 func consume_shot() -> bool:
 	if stats == null:
+		return false
+	if not _host_alive():
 		return false
 	if ammo <= 0:
 		return false
