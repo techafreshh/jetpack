@@ -1,8 +1,9 @@
 extends SceneTree
-## Headless behavior tests for the hitscan prototype and target dummies:
-## 10x12 damage kills a 100 HP dummy, death signals once, hits flash, and a
-## 1 s hold leaves >=10 live Line2D tracers at tick 60.
-## Run: godot --headless --path jetpack --script res://tests/test_hitscan.gd
+## Headless behavior tests for target dummies and tracer volume: 10x12
+## damage kills a 100 HP dummy.tscn/dummy.gd, death signals once, hits
+## flash, and a 1 s hold through weapon.gd Weapon on soldier.tscn leaves
+## >=10 live Line2D tracers at tick 60.
+## Run: godot --headless --path jetpack --script res://tests/test_dummy.gd
 
 var passed := 0
 var failed := 0
