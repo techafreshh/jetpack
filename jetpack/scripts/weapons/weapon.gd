@@ -5,7 +5,7 @@ extends Node2D
 ## means N hitscan rays in one trigger pull; no per-gun branches live here.
 
 @export var stats: WeaponResource
-@export var tracer_lifetime := 0.9
+@export var tracer_lifetime := 1.5
 
 var ammo: int = 0
 var reserve_left: int = 0
@@ -149,6 +149,7 @@ func _spawn_tracer(a: Vector2, b: Vector2) -> void:
 	tracer.add_point(a)
 	tracer.add_point(b)
 	var tween := tracer.create_tween()
+	tween.set_process_mode(Tween.TWEEN_PROCESS_PHYSICS)
 	tween.tween_property(tracer, "modulate:a", 0.0, tracer_lifetime)
 	tween.tween_callback(tracer.queue_free)
 
