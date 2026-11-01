@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """Factory health probe for the Jetpack Arena walking skeleton.
 
-Stdlib only (http.server). Answers GET /health with exactly ``OK JETPACK``
-so factory verification can health-check the lap environment. This is NOT a
-game server.
+Stdlib only (http.server). Answers GET, HEAD, and POST on /health with
+``OK JETPACK`` (HEAD sends headers only, no body) so factory verification
+can health-check the lap environment via any of those methods. This is NOT
+a game server.
 """
 
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -15,16 +16,32 @@ HEALTH_BODY = b"OK JETPACK"
 
 
 class ProbeHandler(BaseHTTPRequestHandler):
-    def do_GET(self) -> None:
+    def _serve_health(self, include_body: bool) -> None:
         path = self.path.split("?", 1)[0]
         if path == HEALTH_PATH:
             self.send_response(200)
             self.send_header("Content-Type", "text/plain")
             self.send_header("Content-Length", str(len(HEALTH_BODY)))
             self.end_headers()
-            self.wfile.write(HEALTH_BODY)
+            if include_body:
+                self.wfile.write(HEALTH_BODY)
         else:
             self.send_error(404, "Not found")
+
+    def do_GET(self) -> None:
+        self._serve_health(include_body=True)
+
+    def do_HEAD(self) -> None:
+        self._serve_health(include_body=False)
+
+    def do_POST(self) -> None:
+        length = self.headers.get("Content-Length")
+        if length:
+            try:
+                self.rfile.read(int(length))
+            except ValueError:
+                pass
+        self._serve_health(include_body=True)
 
     def log_message(self, format: str, *args: object) -> None:
         pass
