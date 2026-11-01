@@ -2,11 +2,14 @@ extends CharacterBody2D
 ## Playable soldier: ground run, half-height crouch, rocket-boot thrust with a
 ## fuel tank that refuels faster when grounded, and momentum-preserving air
 ## control. Fixed 60 Hz physics; tunables load from movement.cfg over exports.
+## Falling below KILL_Y (arena safety net under the wall bottoms) kills via _die().
 
 const CONFIG_PATH := "res://resources/config/movement.cfg"
 const GRENADE_CONFIG_PATH := "res://resources/config/grenade.cfg"
 const SPAWN_CONFIG_PATH := "res://resources/config/spawns.cfg"
 const GRENADE_SCENE := preload("res://scenes/grenade.tscn")
+## World-space safety net below the arena wall bottoms; matches test_arena gate.
+const KILL_Y := 2000.0
 const MAX_GRENADES := 2
 const CHEST_OFFSET := Vector2(0, -32)
 const ARC_STEP := 0.08
@@ -79,6 +82,9 @@ func _physics_process(delta: float) -> void:
 		if respawn_ticks_left <= 0:
 			respawn_ticks_left = 0
 			_respawn()
+		return
+	if global_position.y > KILL_Y:
+		_die()
 		return
 	var was_floor := is_on_floor()
 
