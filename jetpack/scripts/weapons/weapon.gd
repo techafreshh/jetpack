@@ -50,7 +50,13 @@ func consume_shot() -> bool:
 		return false
 	if ammo <= 0:
 		return false
+	if _cooldown > 0.0:
+		return false
 	ammo -= 1
+	var rate: float = stats.fire_rate
+	if rate <= 0.0:
+		rate = 1.0
+	_cooldown = 1.0 / rate
 	return true
 
 
@@ -79,10 +85,6 @@ func _physics_process(delta: float) -> void:
 	if stats == null:
 		return
 	if Input.is_action_pressed("fire") and can_fire():
-		var rate: float = stats.fire_rate
-		if rate <= 0.0:
-			rate = 1.0
-		_cooldown = 1.0 / rate
 		if consume_shot():
 			_fire()
 

@@ -138,6 +138,7 @@ func run_tests() -> void:
 	check(weapon != null, "soldier has Weapon child for restock")
 	if weapon != null:
 		while int(weapon.get("ammo")) > 0:
+			weapon.set("_cooldown", 0.0)
 			weapon.call("consume_shot")
 		check(int(weapon.get("ammo")) == 0, "mag emptied for ammo test")
 		var ammo_pad = await make_pickup("ammo", "scatter", 10.0)
