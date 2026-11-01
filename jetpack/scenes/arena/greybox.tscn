@@ -1,4 +1,4 @@
-[gd_scene load_steps=20 format=3]
+[gd_scene load_steps=21 format=3]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_floor_a"]
 size = Vector2(1200, 80)
@@ -56,6 +56,9 @@ size = Vector2(80, 2600)
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_wall_r"]
 size = Vector2(80, 2600)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_ceiling"]
+size = Vector2(4240, 80)
 
 [node name="Greybox" type="Node2D"]
 
@@ -250,6 +253,16 @@ shape = SubResource("RectangleShape2D_wall_r")
 [node name="Visual" type="Polygon2D" parent="WallR"]
 color = Color(0.28, 0.29, 0.33, 1)
 polygon = PackedVector2Array(-40, -1300, 40, -1300, 40, 1300, -40, 1300)
+
+[node name="Ceiling" type="StaticBody2D" parent="."]
+position = Vector2(1200, -1640)
+
+[node name="Collision" type="CollisionShape2D" parent="Ceiling"]
+shape = SubResource("RectangleShape2D_ceiling")
+
+[node name="Visual" type="Polygon2D" parent="Ceiling"]
+color = Color(0.28, 0.29, 0.33, 1)
+polygon = PackedVector2Array(-2120, -40, 2120, -40, 2120, 40, -2120, 40)
 
 [node name="Spawn0" type="Marker2D" parent="."]
 position = Vector2(200, 300)
