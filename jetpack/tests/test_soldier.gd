@@ -137,4 +137,29 @@ func run_tests() -> void:
 		refill_ticks += 1
 	check(refill_ticks <= 45, "grounded refill within 45 ticks (got %d)" % refill_ticks)
 
+	# (g) Bare-node instantiation: soldier.gd survives with no children.
+	var bare := CharacterBody2D.new()
+	bare.set_script(load("res://scripts/soldier.gd"))
+	root.add_child(bare)
+	await process_frame
+	await process_frame
+	await wait_physics(5)
+	check(is_instance_valid(bare), "bare soldier node stays valid")
+	check(bool(bare.get("is_alive")), "bare soldier stays alive")
+	check(bare.get_node_or_null("Body") == null, "bare soldier has no Body")
+	check(bare.get_node_or_null("HeadCheck") == null, "bare soldier has no HeadCheck")
+	check(bare.get_node_or_null("Visual") == null, "bare soldier has no Visual")
+	check_close(float(bare.get("_stand_h")), 64.0, 0.01, "bare soldier keeps default stand height")
+	bare.call("take_damage", 10.0)
+	check_close(float(bare.get("hp")), 90.0, 0.01, "bare soldier takes damage")
+	bare.call("heal", 5.0)
+	check_close(float(bare.get("hp")), 95.0, 0.01, "bare soldier heals")
+	bare.call("_set_crouched", true)
+	check(bool(bare.get("crouched")), "bare soldier crouch flag sets without Body")
+	bare.call("_set_crouched", false)
+	check(not bool(bare.get("crouched")), "bare soldier crouch flag clears without Body")
+	check(bool(bare.call("throw_grenade")), "bare soldier throws grenade")
+	bare.queue_free()
+	await process_frame
+
 	release_all()

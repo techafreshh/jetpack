@@ -61,9 +61,9 @@ var _stand_h: float = 64.0
 var _saved_layer := 1
 var _saved_mask := 1
 
-@onready var _body: CollisionShape2D = $Body
-@onready var _head_check: RayCast2D = $HeadCheck
-@onready var _visual: Polygon2D = $Visual
+@onready var _body: CollisionShape2D = get_node_or_null("Body") as CollisionShape2D
+@onready var _head_check: RayCast2D = get_node_or_null("HeadCheck") as RayCast2D
+@onready var _visual: Polygon2D = get_node_or_null("Visual") as Polygon2D
 @onready var _arc: Line2D = get_node_or_null("ArcPreview") as Line2D
 
 
@@ -73,7 +73,7 @@ func _ready() -> void:
 	_saved_layer = collision_layer
 	_saved_mask = collision_mask
 	# Never mutate the shared sub-resource when crouch-resizing.
-	if _body.shape != null:
+	if _body != null and _body.shape != null:
 		_body.shape = _body.shape.duplicate()
 		_stand_h = (_body.shape as RectangleShape2D).size.y
 	fuel = fuel_max
@@ -96,9 +96,12 @@ func _physics_process(delta: float) -> void:
 	if Input.is_action_pressed("crouch"):
 		_set_crouched(true)
 	else:
-		_head_check.force_raycast_update()
-		if not _head_check.is_colliding():
+		if _head_check == null:
 			_set_crouched(false)
+		else:
+			_head_check.force_raycast_update()
+			if not _head_check.is_colliding():
+				_set_crouched(false)
 
 	thrusting = Input.is_action_pressed("fly") and fuel > 0.0
 
@@ -285,6 +288,8 @@ func _set_crouched(on: bool) -> void:
 	if crouched == on:
 		return
 	crouched = on
+	if _body == null:
+		return
 	var rect := _body.shape as RectangleShape2D
 	if rect == null:
 		return
@@ -292,8 +297,9 @@ func _set_crouched(on: bool) -> void:
 	rect.size = Vector2(rect.size.x, h)
 	# Re-seat the shape so the feet stay planted at the same floor point.
 	_body.position.y = -h * 0.5
-	_visual.position.y = -h * 0.5
-	_visual.scale.y = h / _stand_h
+	if _visual != null:
+		_visual.position.y = -h * 0.5
+		_visual.scale.y = h / _stand_h
 
 
 func _load_config() -> void:
