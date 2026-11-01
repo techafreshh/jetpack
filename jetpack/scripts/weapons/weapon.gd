@@ -9,6 +9,10 @@ extends Node2D
 
 var ammo: int = 0
 var reserve_left: int = 0
+# Script-level aim override for headless tests: raw Input.warp_mouse is a
+# display-server no-op with no cursor headlessly, so steer aim via this seam.
+var aim_override := Vector2.ZERO
+var has_aim_override := false
 
 var _cooldown := 0.0
 
@@ -83,6 +87,21 @@ func _physics_process(delta: float) -> void:
 			_fire()
 
 
+func set_aim_point(p: Vector2) -> void:
+	aim_override = p
+	has_aim_override = true
+
+
+func clear_aim_override() -> void:
+	has_aim_override = false
+
+
+func _aim_point() -> Vector2:
+	if has_aim_override:
+		return aim_override
+	return get_global_mouse_position()
+
+
 func _fire() -> void:
 	if stats == null:
 		return
@@ -91,7 +110,7 @@ func _fire() -> void:
 		from = _muzzle.global_position
 	elif has_node("Muzzle"):
 		from = (get_node("Muzzle") as Marker2D).global_position
-	var to_mouse := get_global_mouse_position()
+	var to_mouse := _aim_point()
 	var base := to_mouse - from
 	if base.length() < 1.0:
 		base = Vector2.RIGHT

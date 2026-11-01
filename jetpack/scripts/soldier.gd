@@ -52,6 +52,10 @@ signal respawned
 var fuel: float = 100.0
 var crouched: bool = false
 var thrusting: bool = false
+# Script-level aim override for headless tests: raw Input.warp_mouse is a
+# display-server no-op with no cursor headlessly, so steer aim via this seam.
+var aim_override := Vector2.ZERO
+var has_aim_override := false
 
 var _stand_h: float = 64.0
 var _saved_layer := 1
@@ -239,9 +243,24 @@ func throw_grenade() -> bool:
 	return true
 
 
+func set_aim_point(p: Vector2) -> void:
+	aim_override = p
+	has_aim_override = true
+
+
+func clear_aim_override() -> void:
+	has_aim_override = false
+
+
+func _aim_point() -> Vector2:
+	if has_aim_override:
+		return aim_override
+	return get_global_mouse_position()
+
+
 func _aim_direction() -> Vector2:
 	var from := global_position + CHEST_OFFSET
-	var d := get_global_mouse_position() - from
+	var d := _aim_point() - from
 	if d.length() < 1.0:
 		return Vector2.RIGHT
 	return d.normalized()
