@@ -81,6 +81,12 @@ func run_tests() -> void:
 	await process_frame
 	await process_frame
 	check(soldier.get_node_or_null("Weapon") != null, "soldier has Weapon child")
+	var ranger := load("res://resources/weapons/ranger_ar.tres") as WeaponResource
+	check(ranger != null, "ranger_ar.tres loads as WeaponResource")
+	var weapon := soldier.get_node_or_null("Weapon")
+	if weapon != null and ranger != null:
+		weapon.call("equip", ranger)
+	check(weapon != null and ranger != null and int(weapon.get("ammo")) >= 10, "ranger equip fills mag for volume probe")
 	Input.action_press("fire")
 	await wait_physics(60)
 	var tracers := root.find_children("*", "Line2D", true, false)
