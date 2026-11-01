@@ -146,3 +146,54 @@ func run_tests() -> void:
 					check(int(weapon.get("stats").get("mag_size")) == 30, "default Weapon is ranger data")
 			soldier.queue_free()
 			await process_frame
+
+	# (e) Dead soldier cannot fire: live gun fires headless, the corpse
+	# holds ammo with `fire` held, and respawn re-arms the same weapon.
+	var corpse_packed := load("res://scenes/soldier.tscn") as PackedScene
+	check(corpse_packed != null, "soldier.tscn loads for dead-fire test")
+	if corpse_packed != null:
+		var corpse := corpse_packed.instantiate() as CharacterBody2D
+		check(corpse != null, "dead-fire soldier instantiates")
+		if corpse != null:
+			corpse.position = Vector2(0, -40)
+			root.add_child(corpse)
+			await process_frame
+			await process_frame
+			var gun = corpse.get_node_or_null("Weapon")
+			check(gun != null, "dead-fire soldier has Weapon child")
+			if gun != null:
+				# Sanity: the live gun fires headless with `fire` held.
+				gun.set("_cooldown", 0.0)
+				var live_ammo: int = int(gun.get("ammo"))
+				Input.action_press("fire")
+				await wait_physics(20)
+				Input.action_release("fire")
+				check(int(gun.get("ammo")) < live_ammo, "live gun consumes ammo with fire held")
+				# Corpse: trigger pulls consume nothing while dead.
+				corpse.call("take_damage", 200.0)
+				check(not bool(corpse.get("is_alive")), "fire-test soldier is dead")
+				gun.set("_cooldown", 0.0)
+				var dead_ammo: int = int(gun.get("ammo"))
+				check(not bool(gun.call("can_fire")), "dead host can_fire is false")
+				Input.action_press("fire")
+				await wait_physics(10)
+				Input.action_release("fire")
+				check(int(gun.get("ammo")) == dead_ammo, "dead gun consumes no ammo with fire held")
+				check(not bool(gun.call("can_fire")), "dead host can_fire stays false")
+				# Respawn re-arms the same weapon automatically.
+				var back := false
+				for i in 220:
+					await physics_frame
+					if bool(corpse.get("is_alive")):
+						back = true
+						break
+				check(back, "fire-test soldier respawns")
+				gun.set("_cooldown", 0.0)
+				var rearmed: int = int(gun.get("ammo"))
+				Input.action_press("fire")
+				await wait_physics(20)
+				Input.action_release("fire")
+				check(int(gun.get("ammo")) < rearmed, "respawned gun fires again")
+			Input.action_release("fire")
+			corpse.queue_free()
+			await process_frame
