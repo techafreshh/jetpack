@@ -11,7 +11,7 @@ extends Node2D
 
 var _cooldown := 0.0
 
-@onready var _muzzle: Marker2D = $Muzzle
+@onready var _muzzle: Marker2D = get_node_or_null("Muzzle") as Marker2D
 
 
 func _ready() -> void:

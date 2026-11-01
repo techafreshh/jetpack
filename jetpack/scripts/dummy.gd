@@ -15,7 +15,7 @@ var flash_t := 0.0
 
 var _base_color := Color(1.0, 0.55, 0.15, 1.0)
 
-@onready var _visual: Polygon2D = $Visual
+@onready var _visual: Polygon2D = get_node_or_null("Visual") as Polygon2D
 
 
 func _ready() -> void:
