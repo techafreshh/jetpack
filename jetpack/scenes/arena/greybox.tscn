@@ -1,4 +1,4 @@
-[gd_scene load_steps=25 format=3]
+[gd_scene load_steps=28 format=3]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_floor_a"]
 size = Vector2(1200, 80)
@@ -11,6 +11,15 @@ size = Vector2(880, 80)
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_floor_d"]
 size = Vector2(880, 80)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_gap_0"]
+size = Vector2(120, 80)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_gap_1"]
+size = Vector2(120, 80)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_gap_2"]
+size = Vector2(120, 80)
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_plat_0"]
 size = Vector2(240, 24)
@@ -115,6 +124,36 @@ shape = SubResource("RectangleShape2D_floor_d")
 [node name="Visual" type="Polygon2D" parent="FloorD"]
 color = Color(0.32, 0.33, 0.37, 1)
 polygon = PackedVector2Array(-440, -40, 440, -40, 440, 40, -440, 40)
+
+[node name="FloorGap0" type="StaticBody2D" parent="."]
+position = Vector2(460, 440)
+
+[node name="Collision" type="CollisionShape2D" parent="FloorGap0"]
+shape = SubResource("RectangleShape2D_gap_0")
+
+[node name="Visual" type="Polygon2D" parent="FloorGap0"]
+color = Color(0.32, 0.33, 0.37, 1)
+polygon = PackedVector2Array(-60, -40, 60, -40, 60, 40, -60, 40)
+
+[node name="FloorGap1" type="StaticBody2D" parent="."]
+position = Vector2(1260, 440)
+
+[node name="Collision" type="CollisionShape2D" parent="FloorGap1"]
+shape = SubResource("RectangleShape2D_gap_1")
+
+[node name="Visual" type="Polygon2D" parent="FloorGap1"]
+color = Color(0.32, 0.33, 0.37, 1)
+polygon = PackedVector2Array(-60, -40, 60, -40, 60, 40, -60, 40)
+
+[node name="FloorGap2" type="StaticBody2D" parent="."]
+position = Vector2(2260, 440)
+
+[node name="Collision" type="CollisionShape2D" parent="FloorGap2"]
+shape = SubResource("RectangleShape2D_gap_2")
+
+[node name="Visual" type="Polygon2D" parent="FloorGap2"]
+color = Color(0.32, 0.33, 0.37, 1)
+polygon = PackedVector2Array(-60, -40, 60, -40, 60, 40, -60, 40)
 
 [node name="Plat0" type="StaticBody2D" parent="."]
 position = Vector2(0, 150)
