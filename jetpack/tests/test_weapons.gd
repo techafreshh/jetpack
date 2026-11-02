@@ -254,6 +254,18 @@ func run_tests() -> void:
 				Input.action_release("fire")
 				check(int(gun.get("ammo")) == dead_ammo, "dead gun consumes no ammo with fire held")
 				check(not bool(gun.call("can_fire")), "dead host can_fire stays false")
+				# Dead host cannot reload: denial is a pure no-op.
+				gun.set("ammo", int(gun.get("stats").get("mag_size")) - 5)
+				if int(gun.get("reserve_left")) <= 0:
+					gun.set("reserve_left", 5)
+				gun.set("_cooldown", 0.5)
+				var dead_reload_ammo: int = int(gun.get("ammo"))
+				var dead_reload_reserve: int = int(gun.get("reserve_left"))
+				var dead_reload_cd: float = float(gun.get("_cooldown"))
+				check(not bool(gun.call("reload")), "dead host reload is false")
+				check(int(gun.get("ammo")) == dead_reload_ammo, "dead reload leaves ammo unchanged")
+				check(int(gun.get("reserve_left")) == dead_reload_reserve, "dead reload leaves reserve unchanged")
+				check_close(float(gun.get("_cooldown")), dead_reload_cd, 0.0001, "dead reload preserves the gate")
 				# Respawn re-arms the same weapon automatically.
 				var back := false
 				for i in 220:
@@ -268,6 +280,14 @@ func run_tests() -> void:
 				await wait_physics(20)
 				Input.action_release("fire")
 				check(int(gun.get("ammo")) < rearmed, "respawned gun fires again")
+				# Live control: the same gun reloads again once the host is alive.
+				gun.set("ammo", int(gun.get("stats").get("mag_size")) - 3)
+				if int(gun.get("reserve_left")) <= 0:
+					gun.set("reserve_left", 5)
+				gun.set("_cooldown", 0.5)
+				check(bool(gun.call("reload")), "live host reload succeeds after respawn")
+				check(int(gun.get("ammo")) == int(gun.get("stats").get("mag_size")), "live reload refills mag after respawn")
+				check_close(float(gun.get("_cooldown")), 0.0, 0.0001, "live reload clears the gate after respawn")
 			Input.action_release("fire")
 			corpse.queue_free()
 			await process_frame
