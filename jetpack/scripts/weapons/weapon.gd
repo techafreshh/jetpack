@@ -6,6 +6,9 @@ extends Node2D
 
 @export var stats: WeaponResource
 @export var tracer_lifetime := 1.5
+@export var max_tracers := 32
+
+var _tracers: Array[Line2D] = []
 
 var ammo: int = 0
 var reserve_left: int = 0
@@ -163,6 +166,16 @@ func _fire_ray(from: Vector2, dir: Vector2) -> void:
 
 
 func _spawn_tracer(a: Vector2, b: Vector2) -> void:
+	var cap: int = maxi(1, max_tracers)
+	var live: Array[Line2D] = []
+	for t in _tracers:
+		if is_instance_valid(t) and not t.is_queued_for_deletion():
+			live.append(t)
+	_tracers = live
+	while _tracers.size() >= cap:
+		var oldest: Line2D = _tracers.pop_front()
+		if is_instance_valid(oldest) and not oldest.is_queued_for_deletion():
+			oldest.queue_free()
 	var tracer := Line2D.new()
 	tracer.top_level = true
 	tracer.width = 3.0
@@ -175,6 +188,7 @@ func _spawn_tracer(a: Vector2, b: Vector2) -> void:
 	tween.set_process_mode(Tween.TWEEN_PROCESS_PHYSICS)
 	tween.tween_property(tracer, "modulate:a", 0.0, tracer_lifetime)
 	tween.tween_callback(tracer.queue_free)
+	_tracers.append(tracer)
 
 
 func _ensure_fire_action() -> void:
