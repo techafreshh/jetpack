@@ -45,12 +45,7 @@ func _report_bad_rate() -> void:
 
 
 func _host_alive() -> bool:
-	var parent := get_parent()
-	if parent == null:
-		return true
-	if parent.has_method("get") and "is_alive" in parent:
-		return bool(parent.get("is_alive"))
-	return true
+	return Health.is_host_alive(get_parent())
 
 
 func can_fire() -> bool:

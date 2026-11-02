@@ -73,10 +73,7 @@ func live_enemy_positions(exclude: Node = null) -> Array[Vector2]:
 			continue
 		if not (node is Node2D):
 			continue
-		if node.has_method("get") and "is_alive" in node:
-			if not bool(node.get("is_alive")):
-				continue
-		else:
+		if not Health.is_live_foe(node):
 			continue
 		out.append((node as Node2D).global_position)
 	return out
