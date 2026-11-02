@@ -89,7 +89,20 @@ func _load_config() -> void:
 	if cfg.load(CONFIG_PATH) != OK:
 		push_warning("grenade: missing %s, using export defaults" % CONFIG_PATH)
 		return
-	fuse_time = float(cfg.get_value("grenade", "fuse_time", fuse_time))
-	blast_radius = float(cfg.get_value("grenade", "blast_radius", blast_radius))
-	max_damage = float(cfg.get_value("grenade", "max_damage", max_damage))
-	knockback_max = float(cfg.get_value("grenade", "knockback_max", knockback_max))
+	fuse_time = _cfg_float(cfg, "grenade", "fuse_time", fuse_time)
+	blast_radius = _cfg_float(cfg, "grenade", "blast_radius", blast_radius)
+	max_damage = _cfg_float(cfg, "grenade", "max_damage", max_damage)
+	knockback_max = _cfg_float(cfg, "grenade", "knockback_max", knockback_max)
+
+
+static func _cfg_float(cfg: ConfigFile, section: String, key: String, fallback: float) -> float:
+	var raw: Variant = cfg.get_value(section, key, fallback)
+	if raw is float:
+		if is_finite(raw):
+			return raw
+		push_warning("grenade: invalid %s/%s, keeping default" % [section, key])
+		return fallback
+	if raw is int:
+		return float(raw)
+	push_warning("grenade: invalid %s/%s, keeping default" % [section, key])
+	return fallback
