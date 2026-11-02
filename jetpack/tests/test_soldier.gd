@@ -179,6 +179,15 @@ func run_tests() -> void:
 	bare.call("_set_crouched", false)
 	check(not bool(bare.get("crouched")), "bare soldier crouch flag clears without Body")
 	check(bool(bare.call("throw_grenade")), "bare soldier throws grenade")
+	var bare_shells := root.find_children("Grenade", "RigidBody2D", true, false)
+	check(bare_shells.size() == 1, "bare throw spawns one shell")
+	var bare_shell := root.find_child("Grenade", true, false)
+	check(bare_shell != null and bool(bare_shell.get("primed")), "bare shell leaves primed")
+	for n in bare_shells:
+		(n as Node).queue_free()
+	await process_frame
+	await wait_physics(1)
+	check(root.find_children("Grenade", "RigidBody2D", true, false).is_empty(), "bare throw leaves no shells")
 	bare.queue_free()
 	await process_frame
 
