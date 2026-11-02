@@ -24,6 +24,7 @@ func _ready() -> void:
 	if stats != null and ammo <= 0 and reserve_left <= 0:
 		ammo = stats.mag_size
 		reserve_left = stats.reserve
+	_report_bad_rate()
 
 
 func equip(r: WeaponResource) -> void:
@@ -35,6 +36,12 @@ func equip(r: WeaponResource) -> void:
 		return
 	ammo = stats.mag_size
 	reserve_left = stats.reserve
+	_report_bad_rate()
+
+
+func _report_bad_rate() -> void:
+	if stats != null and stats.fire_rate <= 0.0:
+		push_error("weapon: invalid fire_rate %f, refusing to fire" % stats.fire_rate)
 
 
 func _host_alive() -> bool:
@@ -53,6 +60,8 @@ func can_fire() -> bool:
 		return false
 	if ammo <= 0:
 		return false
+	if stats.fire_rate <= 0.0:
+		return false
 	return _cooldown <= 0.0
 
 
@@ -65,10 +74,11 @@ func consume_shot() -> bool:
 		return false
 	if _cooldown > 0.0:
 		return false
-	ammo -= 1
 	var rate: float = stats.fire_rate
 	if rate <= 0.0:
-		rate = 1.0
+		push_error("weapon: invalid fire_rate %f, refusing to fire" % rate)
+		return false
+	ammo -= 1
 	_cooldown = 1.0 / rate
 	return true
 
