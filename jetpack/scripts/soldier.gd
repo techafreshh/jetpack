@@ -352,28 +352,49 @@ func _load_config() -> void:
 	if cfg.load(CONFIG_PATH) != OK:
 		push_warning("soldier: missing %s, using export defaults" % CONFIG_PATH)
 		return
-	run_speed = float(cfg.get_value("movement", "run_speed", run_speed))
-	ground_accel = float(cfg.get_value("movement", "ground_accel", ground_accel))
-	ground_friction = float(cfg.get_value("movement", "ground_friction", ground_friction))
-	air_control = float(cfg.get_value("movement", "air_control", air_control))
-	gravity = float(cfg.get_value("movement", "gravity", gravity))
-	thrust_force = float(cfg.get_value("movement", "thrust_force", thrust_force))
-	max_rise_speed = float(cfg.get_value("movement", "max_rise_speed", max_rise_speed))
-	max_fall_speed = float(cfg.get_value("movement", "max_fall_speed", max_fall_speed))
-	crouch_height_mult = float(cfg.get_value("movement", "crouch_height_mult", crouch_height_mult))
-	crouch_speed_mult = float(cfg.get_value("movement", "crouch_speed_mult", crouch_speed_mult))
-	fuel_max = float(cfg.get_value("movement", "fuel_max", fuel_max))
-	fuel_burn_s = float(cfg.get_value("movement", "fuel_burn_s", fuel_burn_s))
-	ground_refuel_mult = float(cfg.get_value("movement", "ground_refuel_mult", ground_refuel_mult))
-	air_refuel_mult = float(cfg.get_value("movement", "air_refuel_mult", air_refuel_mult))
+	run_speed = _cfg_float(cfg, "movement", "run_speed", run_speed)
+	ground_accel = _cfg_float(cfg, "movement", "ground_accel", ground_accel)
+	ground_friction = _cfg_float(cfg, "movement", "ground_friction", ground_friction)
+	air_control = _cfg_float(cfg, "movement", "air_control", air_control)
+	gravity = _cfg_float(cfg, "movement", "gravity", gravity)
+	thrust_force = _cfg_float(cfg, "movement", "thrust_force", thrust_force)
+	max_rise_speed = _cfg_float(cfg, "movement", "max_rise_speed", max_rise_speed)
+	max_fall_speed = _cfg_float(cfg, "movement", "max_fall_speed", max_fall_speed)
+	crouch_height_mult = _cfg_float(cfg, "movement", "crouch_height_mult", crouch_height_mult)
+	crouch_speed_mult = _cfg_float(cfg, "movement", "crouch_speed_mult", crouch_speed_mult)
+	fuel_max = _cfg_float(cfg, "movement", "fuel_max", fuel_max)
+	fuel_burn_s = _cfg_float(cfg, "movement", "fuel_burn_s", fuel_burn_s)
+	ground_refuel_mult = _cfg_float(cfg, "movement", "ground_refuel_mult", ground_refuel_mult)
+	air_refuel_mult = _cfg_float(cfg, "movement", "air_refuel_mult", air_refuel_mult)
 
 	var gcfg := ConfigFile.new()
 	if gcfg.load(GRENADE_CONFIG_PATH) != OK:
 		push_warning("soldier: missing %s, using export defaults" % GRENADE_CONFIG_PATH)
 		return
-	throw_speed = float(gcfg.get_value("grenade", "throw_speed", throw_speed))
-	grenade_max = int(gcfg.get_value("grenade", "max_grenades", grenade_max))
+	throw_speed = _cfg_float(gcfg, "grenade", "throw_speed", throw_speed)
+	grenade_max = _cfg_int(gcfg, "grenade", "max_grenades", grenade_max)
 	grenade_count = mini(grenade_count, grenade_max)
+
+
+static func _cfg_float(cfg: ConfigFile, section: String, key: String, fallback: float) -> float:
+	var raw: Variant = cfg.get_value(section, key, fallback)
+	if raw is float:
+		if is_finite(raw):
+			return raw
+		push_warning("soldier: invalid %s/%s, keeping default" % [section, key])
+		return fallback
+	if raw is int:
+		return float(raw)
+	push_warning("soldier: invalid %s/%s, keeping default" % [section, key])
+	return fallback
+
+
+static func _cfg_int(cfg: ConfigFile, section: String, key: String, fallback: int) -> int:
+	var raw: Variant = cfg.get_value(section, key, fallback)
+	if raw is int:
+		return raw
+	push_warning("soldier: invalid %s/%s, keeping default" % [section, key])
+	return fallback
 
 
 func _load_spawn_config() -> void:
@@ -381,7 +402,7 @@ func _load_spawn_config() -> void:
 	if cfg.load(SPAWN_CONFIG_PATH) != OK:
 		push_warning("soldier: missing %s, using export defaults" % SPAWN_CONFIG_PATH)
 		return
-	_spawn_delay_ticks = int(cfg.get_value("respawn", "delay_ticks", Health.RESPAWN_TICKS))
+	_spawn_delay_ticks = _cfg_int(cfg, "respawn", "delay_ticks", Health.RESPAWN_TICKS)
 	_spawn_points.clear()
 	for i in 8:
 		var raw: Variant = cfg.get_value("spawn%d" % i, "pos", Vector2.INF)
