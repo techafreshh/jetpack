@@ -120,23 +120,30 @@ func run_tests() -> void:
 		root.remove_child(idle_armed)
 		idle_armed.free()
 
-	# Invalid fire_rate fails loudly: zero/negative never fires, consumes
-	# nothing, arms no cooldown; a positive control still fires.
-	for bad_rate in [0.0, -5.0]:
+	# fire_rate is editor-guarded: out-of-range and non-finite assignments
+	# clamp into range with a warning, so the gun stays fireable with a
+	# real cooldown; in-range values pass through untouched.
+	for bad_rate in [0.0, -5.0, INF, -INF, NAN]:
 		var bad := WeaponResource.new()
 		bad.fire_rate = bad_rate
 		bad.mag_size = 30
 		bad.reserve = 90
+		check_close(float(bad.fire_rate), WeaponResource.MIN_FIRE_RATE, 0.0001, "fire_rate %f clamps to minimum" % bad_rate)
 		var bw = make_weapon()
 		if bw == null:
 			return
 		bw.call("equip", bad)
-		var bad_mag: int = int(bw.get("ammo"))
-		check(not bool(bw.call("can_fire")), "fire_rate %f cannot fire" % bad_rate)
-		check(not bool(bw.call("consume_shot")), "fire_rate %f consume fails" % bad_rate)
-		check(int(bw.get("ammo")) == bad_mag, "fire_rate %f leaves ammo unchanged" % bad_rate)
-		check_close(float(bw.get("_cooldown")), 0.0, 0.0001, "fire_rate %f arms no cooldown" % bad_rate)
+		check(bool(bw.call("can_fire")), "clamped fire_rate %f can_fire" % bad_rate)
+		check(bool(bw.call("consume_shot")), "clamped fire_rate %f consume succeeds" % bad_rate)
+		check(float(bw.get("_cooldown")) > 0.0, "clamped fire_rate %f arms cooldown" % bad_rate)
 		bw.free()
+	var hot := WeaponResource.new()
+	hot.fire_rate = 100.0
+	check_close(float(hot.fire_rate), WeaponResource.MAX_FIRE_RATE, 0.0001, "fire_rate 100.0 clamps to maximum")
+	for ok_rate in [0.1, 0.8, 1.1, 10.0, 60.0]:
+		var ok := WeaponResource.new()
+		ok.fire_rate = ok_rate
+		check_close(float(ok.fire_rate), ok_rate, 0.0001, "fire_rate %f passes through" % ok_rate)
 	var good := WeaponResource.new()
 	good.fire_rate = 1.0
 	good.mag_size = 30
