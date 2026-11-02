@@ -47,6 +47,10 @@ func take_damage(amount: float) -> void:
 		return
 	hp = maxf(0.0, hp - amount)
 	health_changed.emit(hp, max_hp)
+	if is_inside_tree():
+		Sfx.ensure_buses()
+		get_tree().call_group("sfx", "play_sfx", "hit")
+		HitStop.trigger(get_tree())
 	var visual := _visual if _visual != null else get_node_or_null("Visual") as Polygon2D
 	if visual != null:
 		visual.color = Color.WHITE

@@ -14,3 +14,4 @@ projectile=1
 pellet_count=8
 zoom=1.0
 range=500.0
+sfx_name="scatter_shot"

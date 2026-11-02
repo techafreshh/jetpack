@@ -1,8 +1,8 @@
 extends SceneTree
 ## Headless behavior tests for target dummies and tracer volume: 10x12
 ## damage kills a 100 HP dummy.tscn/dummy.gd, death signals once, hits
-## flash, and a 1.1 s hold through weapon.gd Weapon on soldier.tscn leaves
-## >=10 genuine Line2D tracers (weapon children, ArcPreview excluded) at tick 66.
+## flash, and a 2 s hold through weapon.gd Weapon on soldier.tscn leaves
+## >=10 genuine Line2D tracers (weapon children, ArcPreview excluded) at tick 120.
 ## Run: godot --headless --path jetpack --script res://tests/test_dummy.gd
 
 const EXPLOSION_SCRIPT := preload("res://scripts/fx/explosion.gd")
@@ -195,10 +195,12 @@ func run_tests() -> void:
 	race_probe.queue_free()
 	race_live.queue_free()
 
-	# Tracer volume: hold fire 66 physics ticks for >=10 genuine
+	# Tracer volume: hold fire 120 physics ticks for >=10 genuine
 	# weapon-child Line2D tracers (soldier ArcPreview excluded). A 0.1 s
 	# cooldown clears every 7th physics tick, so 60 ticks yield only 9
 	# genuine tracers; the old root-wide >=10 passed on ArcPreview padding.
+	# Hit-stop stretches cooldown recovery (60 ms at 0.2 scale per landed
+	# hit), so the hold runs 120 ticks to land the same >=10 volume.
 	var soldier_packed := load("res://scenes/soldier.tscn") as PackedScene
 	check(soldier_packed != null, "soldier.tscn loads as PackedScene")
 	if soldier_packed == null:
@@ -219,9 +221,9 @@ func run_tests() -> void:
 		weapon.call("equip", ranger)
 	check(weapon != null and ranger != null and int(weapon.get("ammo")) >= 10, "ranger equip fills mag for volume probe")
 	Input.action_press("fire")
-	await wait_physics(66)
+	await wait_physics(120)
 	var held := live_tracers_of(weapon).size()
-	check(held >= 10, "1 s hold leaves >=10 live tracers (got %d)" % held)
+	check(held >= 10, "2 s hold leaves >=10 live tracers (got %d)" % held)
 	# Weapon-children filter excludes the soldier ArcPreview Line2D.
 	var arc := soldier.get_node_or_null("ArcPreview") as Line2D
 	check(arc != null, "ArcPreview Line2D exists")

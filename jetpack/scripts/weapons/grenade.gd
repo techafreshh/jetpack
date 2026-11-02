@@ -25,6 +25,8 @@ var _beep_accum := 0.0
 
 func _ready() -> void:
 	_load_config()
+	if _beep != null and _beep.stream == null:
+		_beep.stream = preload("res://assets/audio/grenade_beep.wav")
 	var default_grav: float = ProjectSettings.get_setting("physics/2d/default_gravity", 980.0)
 	if default_grav > 0.0:
 		gravity_scale = flight_gravity / default_grav

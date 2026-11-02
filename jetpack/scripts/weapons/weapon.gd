@@ -4,6 +4,8 @@ extends Node2D
 ## pellet_count, ammo from mag_size/reserve, scope from zoom). Pellet kind
 ## means N hitscan rays in one trigger pull; no per-gun branches live here.
 
+const FX_CONFIG_PATH := "res://resources/config/fx.cfg"
+
 @export var stats: WeaponResource
 @export var tracer_lifetime := 1.5
 @export var max_tracers := 32
@@ -17,6 +19,9 @@ const TRACER_DEFAULT := Color(1.0, 0.85, 0.4, 1.0)
 const TRACER_ENEMY_CB := Color8(0, 102, 255)
 ## Exact colour-blind friendly orange; probes read this hex verbatim.
 const TRACER_FRIENDLY_CB := Color8(255, 136, 0)
+
+var muzzle_flash: Polygon2D
+var _flash_ticks := 0
 
 var _tracers: Array[Line2D] = []
 
@@ -36,6 +41,7 @@ func _ready() -> void:
 	if stats != null and ammo <= 0 and reserve_left <= 0:
 		ammo = stats.mag_size
 		reserve_left = stats.reserve
+	_build_muzzle_flash()
 	_report_bad_rate()
 
 
@@ -111,6 +117,9 @@ func reload() -> bool:
 	ammo += take
 	reserve_left -= take
 	_cooldown = 0.0
+	if is_inside_tree():
+		Sfx.ensure_buses()
+		get_tree().call_group("sfx", "play_sfx", "reload")
 	return true
 
 
@@ -121,6 +130,10 @@ func get_zoom() -> float:
 
 
 func _physics_process(delta: float) -> void:
+	if _flash_ticks > 0:
+		_flash_ticks -= 1
+		if _flash_ticks <= 0 and muzzle_flash != null:
+			muzzle_flash.visible = false
 	if stats == null:
 		return
 	_cooldown = maxf(0.0, _cooldown - delta)
@@ -161,6 +174,11 @@ func _fire() -> void:
 		var ang := deg_to_rad(randf_range(-stats.spread_deg * 0.5, stats.spread_deg * 0.5))
 		var dir := base.rotated(ang)
 		_fire_ray(from, dir)
+	_show_muzzle_flash()
+	if is_inside_tree():
+		Sfx.ensure_buses()
+		get_tree().call_group("sfx", "play_sfx", stats.sfx_name)
+		get_tree().call_group("camera_shake", "add_shake")
 
 
 func _fire_ray(from: Vector2, dir: Vector2) -> void:
@@ -203,6 +221,40 @@ func _flash_muzzle() -> void:
 		flash_node = get_node_or_null("MuzzleFlash")
 	if flash_node != null and flash_node.has_method("flash"):
 		flash_node.call("flash")
+
+
+func _build_muzzle_flash() -> void:
+	if muzzle_flash != null:
+		return
+	var tip := Vector2(20.0, -32.0)
+	if _muzzle != null:
+		tip = _muzzle.position
+	elif has_node("Muzzle"):
+		tip = (get_node("Muzzle") as Marker2D).position
+	var flash := Polygon2D.new()
+	flash.name = "MuzzleFlash"
+	flash.color = Color(1.0, 0.8, 0.3, 1.0)
+	flash.polygon = PackedVector2Array([
+		tip + Vector2(-6, -8), tip + Vector2(14, 0), tip + Vector2(-6, 8),
+	])
+	flash.visible = false
+	flash.add_to_group("muzzle_flash")
+	add_child(flash)
+	muzzle_flash = flash
+
+
+func _show_muzzle_flash() -> void:
+	var ticks := 3
+	var cfg := ConfigFile.new()
+	if cfg.load(FX_CONFIG_PATH) == OK:
+		var raw: Variant = cfg.get_value("flash", "ticks", 3)
+		if raw is int:
+			ticks = maxi(2, mini(4, raw))
+		elif raw is float and is_finite(raw):
+			ticks = maxi(2, mini(4, int(raw)))
+	_flash_ticks = ticks
+	if muzzle_flash != null:
+		muzzle_flash.visible = true
 
 
 func _spawn_tracer(a: Vector2, b: Vector2) -> void:
