@@ -1,4 +1,4 @@
-[gd_scene load_steps=7 format=3]
+[gd_scene load_steps=8 format=3]
 
 [ext_resource type="Script" path="res://scripts/match.gd" id="1"]
 [ext_resource type="PackedScene" path="res://scenes/arena/greybox.tscn" id="2"]
@@ -6,6 +6,7 @@
 [ext_resource type="PackedScene" path="res://scenes/pickup.tscn" id="4"]
 [ext_resource type="Script" path="res://scripts/match/match_manager.gd" id="5"]
 [ext_resource type="PackedScene" path="res://scenes/ui/hud.tscn" id="6"]
+[ext_resource type="PackedScene" path="res://scenes/ui/standings.tscn" id="7"]
 
 [node name="Match" type="Node2D"]
 script = ExtResource("1")
@@ -37,3 +38,5 @@ kind = "grenade"
 script = ExtResource("5")
 
 [node name="hud" parent="." instance=ExtResource("6")]
+
+[node name="Standings" parent="." instance=ExtResource("7")]
