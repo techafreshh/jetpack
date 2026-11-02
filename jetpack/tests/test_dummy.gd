@@ -1,8 +1,8 @@
 extends SceneTree
 ## Headless behavior tests for target dummies and tracer volume: 10x12
 ## damage kills a 100 HP dummy.tscn/dummy.gd, death signals once, hits
-## flash, and a 1 s hold through weapon.gd Weapon on soldier.tscn leaves
-## >=10 live Line2D tracers at tick 60.
+## flash, and a 1.1 s hold through weapon.gd Weapon on soldier.tscn leaves
+## >=10 genuine Line2D tracers (weapon children, ArcPreview excluded) at tick 66.
 ## Run: godot --headless --path jetpack --script res://tests/test_dummy.gd
 
 const EXPLOSION_SCRIPT := preload("res://scripts/fx/explosion.gd")
@@ -32,6 +32,14 @@ func check_close(actual: float, expected: float, tol: float, label: String) -> v
 func wait_physics(n: int) -> void:
 	for i in n:
 		await physics_frame
+
+
+func live_tracers_of(weapon: Node) -> Array:
+	var out := []
+	for c in weapon.get_children():
+		if c is Line2D and is_instance_valid(c) and not (c as Node).is_queued_for_deletion():
+			out.append(c)
+	return out
 
 
 func run_tests() -> void:
@@ -136,7 +144,10 @@ func run_tests() -> void:
 	check(float(far_dummy.get("hp")) == far_hp0, "out-of-radius blast spares dummy (hp=%f)" % float(far_dummy.get("hp")))
 	boom2.queue_free()
 
-	# Tracer volume: hold fire 60 physics ticks, >=10 live Line2D at tick 60.
+	# Tracer volume: hold fire 66 physics ticks for >=10 genuine
+	# weapon-child Line2D tracers (soldier ArcPreview excluded). A 0.1 s
+	# cooldown clears every 7th physics tick, so 60 ticks yield only 9
+	# genuine tracers; the old root-wide >=10 passed on ArcPreview padding.
 	var soldier_packed := load("res://scenes/soldier.tscn") as PackedScene
 	check(soldier_packed != null, "soldier.tscn loads as PackedScene")
 	if soldier_packed == null:
@@ -157,9 +168,14 @@ func run_tests() -> void:
 		weapon.call("equip", ranger)
 	check(weapon != null and ranger != null and int(weapon.get("ammo")) >= 10, "ranger equip fills mag for volume probe")
 	Input.action_press("fire")
-	await wait_physics(60)
-	var tracers := root.find_children("*", "Line2D", true, false)
-	check(tracers.size() >= 10, "1 s hold leaves >=10 live tracers (got %d)" % tracers.size())
+	await wait_physics(66)
+	var held := live_tracers_of(weapon).size()
+	check(held >= 10, "1 s hold leaves >=10 live tracers (got %d)" % held)
+	# Weapon-children filter excludes the soldier ArcPreview Line2D.
+	var arc := soldier.get_node_or_null("ArcPreview") as Line2D
+	check(arc != null, "ArcPreview Line2D exists")
+	var root_wide := root.find_children("*", "Line2D", true, false).size()
+	check(root_wide >= held + 1, "root-wide count includes ArcPreview (root=%d weapon=%d)" % [root_wide, held])
 	Input.action_release("fire")
 
 	# Corpse expiry: a short-lifetime corpse frees itself, died still once.
