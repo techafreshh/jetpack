@@ -12,8 +12,8 @@ var _tracers: Array[Line2D] = []
 
 var ammo: int = 0
 var reserve_left: int = 0
-# Script-level aim override for headless tests: raw Input.warp_mouse is a
-# display-server no-op with no cursor headlessly, so steer aim via this seam.
+# Script-level aim override for headless tests: the display server has no
+# cursor headlessly, so steer aim via this seam.
 var aim_override := Vector2.ZERO
 var has_aim_override := false
 
@@ -23,7 +23,6 @@ var _cooldown := 0.0
 
 
 func _ready() -> void:
-	_ensure_fire_action()
 	if stats != null and ammo <= 0 and reserve_left <= 0:
 		ammo = stats.mag_size
 		reserve_left = stats.reserve
@@ -81,6 +80,13 @@ func consume_shot() -> bool:
 	return true
 
 
+func try_fire() -> bool:
+	if consume_shot():
+		_fire()
+		return true
+	return false
+
+
 func reload() -> bool:
 	if stats == null:
 		return false
@@ -108,9 +114,6 @@ func _physics_process(delta: float) -> void:
 	if stats == null:
 		return
 	_cooldown = maxf(0.0, _cooldown - delta)
-	if Input.is_action_pressed("fire") and can_fire():
-		if consume_shot():
-			_fire()
 
 
 func set_aim_point(p: Vector2) -> void:
@@ -199,16 +202,3 @@ func _spawn_tracer(a: Vector2, b: Vector2) -> void:
 		tween.tween_callback(tracer.queue_free)
 	_tracers.append(tracer)
 
-
-func _ensure_fire_action() -> void:
-	if not InputMap.has_action("fire"):
-		InputMap.add_action("fire")
-	var exists := false
-	for ev in InputMap.action_get_events("fire"):
-		if ev is InputEventMouseButton and (ev as InputEventMouseButton).button_index == MOUSE_BUTTON_LEFT:
-			exists = true
-			break
-	if not exists:
-		var press := InputEventMouseButton.new()
-		press.button_index = MOUSE_BUTTON_LEFT
-		InputMap.action_add_event("fire", press)

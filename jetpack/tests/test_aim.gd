@@ -59,15 +59,15 @@ func run_tests() -> void:
 	if weapon == null:
 		return
 
-	# (a) No override: both nodes fall back to get_global_mouse_position().
+	# (a) No override: the soldier falls back to get_global_mouse_position()
+	# while the weapon takes the soldier's per-tick forwarded aim.
 	check(not bool(soldier.get("has_aim_override")), "soldier override off by default")
-	check(not bool(weapon.get("has_aim_override")), "weapon override off by default")
 	var s_fallback: Vector2 = soldier.get_global_mouse_position()
 	var s_aim = soldier.call("_aim_point")
 	check((s_aim as Vector2).distance_to(s_fallback) < 0.001, "soldier aim equals mouse fallback")
-	var w_fallback: Vector2 = (weapon as Node2D).get_global_mouse_position()
 	var w_aim = weapon.call("_aim_point")
-	check((w_aim as Vector2).distance_to(w_fallback) < 0.001, "weapon aim equals mouse fallback")
+	var s_aim2 = soldier.call("_aim_point")
+	check((w_aim as Vector2).distance_to(s_aim2 as Vector2) < 0.001, "weapon takes soldier forwarded aim")
 
 	# (b) Soldier override steers grenade aim and shell velocity east.
 	soldier.call("set_aim_point", soldier.global_position + Vector2(300, 0))
@@ -83,18 +83,14 @@ func run_tests() -> void:
 		shell_vel = shells.back().get("linear_velocity")
 	check(shell_vel.x > 500.0, "shell leaves east (vx=%f)" % shell_vel.x)
 
-	# (c) Weapon override steers hitscan tracers east of the muzzle.
-	var muzzle := (weapon as Node2D).global_position
-	var m := weapon.get_node_or_null("Muzzle") as Marker2D
-	if m != null:
-		muzzle = m.global_position
-	weapon.call("set_aim_point", muzzle + Vector2(300, 0))
-	check(bool(weapon.get("has_aim_override")), "weapon override flag set")
+	# (c) Soldier override steers command-driven tracers east of the muzzle.
+	soldier.call("set_aim_point", soldier.global_position + Vector2(300, 0))
+	check(bool(soldier.get("has_aim_override")), "soldier override flag set")
 	Input.action_press("fire")
 	await wait_physics(12)
 	Input.action_release("fire")
 	var east := east_tracers_of(weapon)
-	check(east.size() >= 1, "override fires tracers east (got %d)" % east.size())
+	check(east.size() >= 1, "command path fires tracers east (got %d)" % east.size())
 
 	# (d) Standalone weapon honors its own override with no soldier parent.
 	var scr := load("res://scripts/weapons/weapon.gd") as Script
@@ -111,10 +107,10 @@ func run_tests() -> void:
 		lone.global_position = Vector2(-500, -200)
 		lone.call("equip", ranger)
 		lone.call("set_aim_point", (lone as Node2D).global_position + Vector2(300, 0))
-		Input.action_press("fire")
-		await wait_physics(12)
-		Input.action_release("fire")
-		check(east_tracers_of(lone).size() >= 1, "standalone fires tracers east")
+		for i in 12:
+			lone.call("try_fire")
+			await physics_frame
+		check(east_tracers_of(lone).size() >= 1, "standalone fires tracers east via try_fire")
 		lone.queue_free()
 		await process_frame
 
