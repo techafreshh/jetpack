@@ -149,6 +149,8 @@ func run_tests() -> void:
 	# Same pad still heals the next live hurt soldier with no respawn wait.
 	soldier.set("is_alive", true)
 	soldier.set("hp", 50.0)
+	check(soldier.is_in_group("damageable"), "revived soldier rejoins damageable group")
+	check(Health.is_live_foe(soldier), "revived soldier is live foe")
 	check(bool(corpse_pad.call("apply_to", soldier)), "hurt apply_to on corpse pad returns true")
 	check(float(soldier.get("hp")) >= 75.0, "corpse pad heals once hurt (got %f)" % float(soldier.get("hp")))
 	check(bool(corpse_pad.get("disabled")), "corpse pad enters disabled state")
@@ -175,6 +177,7 @@ func run_tests() -> void:
 	# Same crate still serves a live soldier with no respawn wait.
 	soldier.set("is_alive", true)
 	soldier.set("hp", 50.0)
+	check(soldier.is_in_group("damageable"), "revived soldier rejoins damageable group")
 	check(bool(corpse_crate.call("apply_to", soldier)), "live apply_to on corpse weapon pad returns true")
 	check((soldier.get("slots") as Array).has("scatter"), "same weapon pad grants scatter once live")
 	check(bool(corpse_crate.get("disabled")), "same weapon pad enters disabled state")
@@ -288,6 +291,7 @@ func run_tests() -> void:
 	# Same pads still consume for a live soldier with partial stock.
 	soldier.set("is_alive", true)
 	soldier.set("hp", 50.0)
+	check(soldier.is_in_group("damageable"), "revived soldier rejoins damageable group")
 	var corpse_weapon = soldier.get_node_or_null("Weapon")
 	if corpse_weapon != null:
 		corpse_weapon.set("ammo", 0)

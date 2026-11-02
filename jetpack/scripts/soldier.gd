@@ -41,7 +41,15 @@ var grenade_count := 2
 var grenade_max := 2
 var hp := 100.0
 var max_hp := 100.0
-var is_alive := true
+var is_alive := true:
+	set(value):
+		is_alive = value
+		if value:
+			if not is_in_group("damageable"):
+				add_to_group("damageable")
+		else:
+			if is_in_group("damageable"):
+				remove_from_group("damageable")
 var respawn_ticks_left := 0
 ## Why the soldier last died: "fall" (kill-plane) or "damage" (lethal take_damage); "" before any death.
 var last_death_cause := ""
