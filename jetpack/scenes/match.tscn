@@ -1,4 +1,4 @@
-[gd_scene load_steps=10 format=3]
+[gd_scene load_steps=12 format=3]
 
 [ext_resource type="Script" path="res://scripts/match.gd" id="1"]
 [ext_resource type="PackedScene" path="res://scenes/arena/main.tscn" id="2"]
@@ -9,6 +9,8 @@
 [ext_resource type="PackedScene" path="res://scenes/ui/standings.tscn" id="7"]
 [ext_resource type="PackedScene" path="res://scenes/ui/pause.tscn" id="8"]
 [ext_resource type="Script" path="res://scripts/ui/tips.gd" id="9"]
+[ext_resource type="Script" path="res://scripts/fx/camera_shake.gd" id="10"]
+[ext_resource type="Script" path="res://scripts/fx/sfx.gd" id="11"]
 
 [node name="Match" type="Node2D"]
 script = ExtResource("1")
@@ -49,3 +51,11 @@ arena_path = "res://scenes/arena/main.tscn"
 
 [node name="Tips" type="CanvasLayer" parent="."]
 script = ExtResource("9")
+
+[node name="CameraShake" type="Camera2D" parent="."]
+position = Vector2(640, 360)
+enabled = true
+script = ExtResource("10")
+
+[node name="Sfx" type="Node" parent="."]
+script = ExtResource("11")

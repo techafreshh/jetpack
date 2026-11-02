@@ -14,3 +14,4 @@ projectile=0
 pellet_count=1
 zoom=2.5
 range=2000.0
+sfx_name="longbow_shot"

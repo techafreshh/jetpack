@@ -14,3 +14,4 @@ projectile=0
 pellet_count=1
 zoom=1.0
 range=1200.0
+sfx_name="ar_shot"

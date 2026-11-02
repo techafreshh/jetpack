@@ -83,6 +83,8 @@ static func is_fireable_rate(rate: float) -> bool:
 @export_group("Shot")
 @export var projectile: ProjectileKind = ProjectileKind.HITSCAN
 @export var pellet_count: int = 1
+@export_group("Audio")
+@export var sfx_name: String = "shot"
 @export_group("Optics")
 # Edit-time zoom guard: same clamp-and-warn idiom as fire_rate, keeping
 # the 1.0 no-scope identity as the floor.
