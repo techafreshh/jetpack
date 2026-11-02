@@ -35,6 +35,10 @@ func detonate() -> void:
 	_detonated = true
 	var center := global_position
 	for node in get_tree().get_nodes_in_group("damageable"):
+		if node.has_method("get") and "is_dead" in node and bool(node.get("is_dead")):
+			continue
+		if node.has_method("get") and "is_alive" in node and not bool(node.get("is_alive")):
+			continue
 		if not (node is Node2D):
 			continue
 		var target := node as Node2D
