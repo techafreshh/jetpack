@@ -188,6 +188,7 @@ func _die(cause: String = "damage") -> void:
 	collision_layer = 0
 	collision_mask = 0
 	last_death_cause = cause
+	remove_from_group("damageable")
 	died.emit()
 	print("SOLDIER DIED")
 
@@ -222,6 +223,7 @@ func _respawn() -> void:
 	collision_layer = _saved_layer
 	collision_mask = _saved_mask
 	is_alive = true
+	add_to_group("damageable")
 	respawned.emit()
 	print("SOLDIER RESPAWNED")
 
