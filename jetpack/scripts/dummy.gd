@@ -58,4 +58,5 @@ func take_damage(amount: float) -> void:
 		corpse_age = 0.0
 		if visual != null:
 			visual.color = Color(0.45, 0.45, 0.48, 1.0)
+		remove_from_group("damageable")
 		died.emit()
