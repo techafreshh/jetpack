@@ -1,4 +1,4 @@
-[gd_scene load_steps=9 format=3]
+[gd_scene load_steps=10 format=3]
 
 [ext_resource type="Script" path="res://scripts/match.gd" id="1"]
 [ext_resource type="PackedScene" path="res://scenes/arena/main.tscn" id="2"]
@@ -8,6 +8,7 @@
 [ext_resource type="PackedScene" path="res://scenes/ui/hud.tscn" id="6"]
 [ext_resource type="PackedScene" path="res://scenes/ui/standings.tscn" id="7"]
 [ext_resource type="PackedScene" path="res://scenes/ui/pause.tscn" id="8"]
+[ext_resource type="Script" path="res://scripts/ui/tips.gd" id="9"]
 
 [node name="Match" type="Node2D"]
 script = ExtResource("1")
@@ -45,3 +46,6 @@ arena_path = "res://scenes/arena/main.tscn"
 [node name="Standings" parent="." instance=ExtResource("7")]
 
 [node name="Pause" parent="." instance=ExtResource("8")]
+
+[node name="Tips" type="CanvasLayer" parent="."]
+script = ExtResource("9")
