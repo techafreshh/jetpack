@@ -111,6 +111,27 @@ func run_tests() -> void:
 	hp_pack.queue_free()
 	await process_frame
 
+	# (b2) Full-HP walkover is ignored and the pad stays armed.
+	var full_pad = await make_pickup("health", "scatter", 15.0)
+	check(full_pad != null, "full-HP pad instantiates")
+	soldier.set("hp", float(soldier.get("max_hp")))
+	var full_hp_before := float(soldier.get("hp"))
+	check(not bool(full_pad.call("apply_to", soldier)), "full-HP apply_to returns false")
+	check(not bool(full_pad.get("disabled")), "full-HP pad stays enabled")
+	check_close(float(full_pad.get("time_left")), 0.0, 0.01, "full-HP pad sets no timer")
+	var full_label = full_pad.get_node_or_null("TimerLabel")
+	check(full_label != null and String(full_label.get("text")) == "", "full-HP pad shows no timer label")
+	check_close(float(soldier.get("hp")), full_hp_before, 0.01, "full-HP walkover leaves HP unchanged")
+	# Same pad still consumes normally once the soldier is hurt.
+	soldier.set("hp", 50.0)
+	check(bool(full_pad.call("apply_to", soldier)), "hurt apply_to on same pad returns true")
+	check(float(soldier.get("hp")) >= 75.0, "same pad heals once hurt (got %f)" % float(soldier.get("hp")))
+	check(bool(full_pad.get("disabled")), "same pad enters disabled state")
+	var full_label2 = full_pad.get_node_or_null("TimerLabel")
+	check(full_label2 != null and String(full_label2.get("text")) != "", "consumed pad shows timer label")
+	full_pad.queue_free()
+	await process_frame
+
 	# (c) Weapon crate grants scatter and respawns within 20 s.
 	var crate = await make_pickup("weapon", "scatter", 12.0)
 	check(crate != null, "weapon crate instantiates")
