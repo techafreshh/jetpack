@@ -52,12 +52,16 @@ func run_tests() -> void:
 	check(Health.has_alive_flag(soldier), "live soldier has alive flag")
 	check(Health.is_live_foe(soldier), "live soldier is live foe")
 	check(Health.is_host_alive(soldier), "live soldier is host alive")
+	check(not Health.has_dead_flag(soldier), "live soldier has no dead flag")
+	check(not Health.is_dead(soldier), "live soldier is not dead")
 
 	soldier.call("take_damage", 200.0)
 	check(not bool(soldier.get("is_alive")), "lethal damage kills soldier")
 	check(Health.has_alive_flag(soldier), "dead soldier keeps alive flag")
 	check(not Health.is_live_foe(soldier), "dead soldier is not live foe")
 	check(not Health.is_host_alive(soldier), "dead soldier is not host alive")
+	check(not Health.has_dead_flag(soldier), "dead soldier has no dead flag")
+	check(not Health.is_dead(soldier), "dead soldier is not dead")
 
 	var dummy := dummy_packed.instantiate() as StaticBody2D
 	root.add_child(dummy)
@@ -67,16 +71,22 @@ func run_tests() -> void:
 	check(not Health.has_alive_flag(dummy), "live dummy has no alive flag")
 	check(not Health.is_live_foe(dummy), "live dummy is not live foe")
 	check(Health.is_host_alive(dummy), "live dummy is host alive")
+	check(Health.has_dead_flag(dummy), "live dummy has dead flag")
+	check(not Health.is_dead(dummy), "live dummy is not dead")
 
 	var plain := Node.new()
 	check(not Health.has_alive_flag(plain), "plain Node has no alive flag")
 	check(not Health.is_live_foe(plain), "plain Node is not live foe")
 	check(Health.is_host_alive(plain), "plain Node is host alive")
+	check(not Health.has_dead_flag(plain), "plain Node has no dead flag")
+	check(not Health.is_dead(plain), "plain Node is not dead")
 	plain.free()
 
 	check(not Health.has_alive_flag(null), "null has no alive flag")
 	check(not Health.is_live_foe(null), "null is not live foe")
 	check(Health.is_host_alive(null), "null is host alive")
+	check(not Health.has_dead_flag(null), "null has no dead flag")
+	check(not Health.is_dead(null), "null is not dead")
 
 	# Dead dummy never counts either way.
 	dummy.call("take_damage", 200.0)
@@ -84,6 +94,8 @@ func run_tests() -> void:
 	check(not Health.has_alive_flag(dummy), "dead dummy still has no alive flag")
 	check(not Health.is_live_foe(dummy), "dead dummy is not live foe")
 	check(Health.is_host_alive(dummy), "dead dummy is host alive")
+	check(Health.has_dead_flag(dummy), "dead dummy has dead flag")
+	check(Health.is_dead(dummy), "dead dummy is dead")
 
 	# Bare gun (null parent) stays fireable through the shared helper.
 	var weapon_scr := load("res://scripts/weapons/weapon.gd") as Script
@@ -152,3 +164,6 @@ func run_tests() -> void:
 	check(spawner_text.contains("Health.is_live_foe"), "spawner.gd delegates to Health.is_live_foe")
 	check(explosion_text.contains("Health.is_host_alive"), "explosion.gd delegates to Health.is_host_alive")
 	check(health_text.count("\"is_alive\" in") == 1, "health.gd holds the idiom exactly once")
+	check(not explosion_text.contains("\"is_dead\" in"), "explosion.gd holds no is_dead idiom literal")
+	check(explosion_text.contains("Health.is_dead"), "explosion.gd delegates to Health.is_dead")
+	check(health_text.count("\"is_dead\" in") == 1, "health.gd holds the is_dead idiom exactly once")
