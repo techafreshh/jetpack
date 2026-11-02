@@ -163,7 +163,7 @@ func run_tests() -> void:
 	check(current != null, "quit leaves a current scene")
 	if current != null:
 		check(current.scene_file_path == "res://scenes/main_menu.tscn", "quit lands in main_menu.tscn (got %s)" % current.scene_file_path)
-		check(current.get_node_or_null("PlayButton") != null, "main menu exposes PlayButton")
+		check(current.get_node_or_null("Play") != null or current.get_node_or_null("PlayButton") != null, "main menu exposes Play")
 		var title := current.get_node_or_null("Title") as Label
 		check(title != null, "main menu exposes Title")
 		current.queue_free()

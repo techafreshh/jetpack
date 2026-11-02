@@ -26,6 +26,12 @@ var match_state: String = STATE_COUNTDOWN
 var winner_id: String = ""
 var sudden_death: bool = false
 var target_score: int = 25
+## Alias so setup probes and HUD code can read either name; one backing value.
+var target_kills: int:
+	get:
+		return target_score
+	set(value):
+		target_score = value
 var time_limit_s: float = 300.0
 var sudden_death_s: float = 30.0
 var countdown_s: float = 3.0
@@ -296,6 +302,8 @@ func _load_config(path: String = "") -> void:
 	var cfg := ConfigFile.new()
 	if cfg.load(use_path) != OK:
 		push_warning("matchmanager: missing %s, using compiled defaults" % use_path)
+		if MatchSetup.has_override():
+			MatchSetup.apply_to(self)
 		return
 	target_score = _cfg_int(cfg, "match", "target_score", target_score)
 	if target_score < 1:
@@ -322,6 +330,9 @@ func _load_config(path: String = "") -> void:
 		difficulty = String(raw_diff).to_lower()
 	else:
 		push_warning("matchmanager: invalid match/difficulty, keeping default")
+	# Setup-screen overrides win over the file; a clear holder is a no-op.
+	if MatchSetup.has_override():
+		MatchSetup.apply_to(self)
 
 
 static func _cfg_float(cfg: ConfigFile, section: String, key: String, fallback: float) -> float:
