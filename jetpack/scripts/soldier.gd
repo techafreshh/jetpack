@@ -43,6 +43,10 @@ var hp := 100.0
 var max_hp := 100.0
 var is_alive := true
 var respawn_ticks_left := 0
+## Compiled-in spawner-less fallback; matches spawns.cfg spawn0.
+const SAFE_FALLBACK := Vector2(200, 300)
+## Most recent above-plane position; spawner-less respawn prefers it.
+var _last_safe_position := Vector2.INF
 var slots: Array[String] = ["ranger_ar"]
 
 signal died
@@ -78,6 +82,12 @@ func _ready() -> void:
 		_stand_h = (_body.shape as RectangleShape2D).size.y
 	fuel = fuel_max
 	_ensure_input_actions()
+	_record_safe_position()
+
+
+func _record_safe_position() -> void:
+	if global_position.y < KILL_Y:
+		_last_safe_position = global_position
 
 
 func _physics_process(delta: float) -> void:
@@ -87,6 +97,7 @@ func _physics_process(delta: float) -> void:
 			respawn_ticks_left = 0
 			_respawn()
 		return
+	_record_safe_position()
 	if global_position.y > KILL_Y:
 		_die()
 		return
@@ -172,6 +183,7 @@ func _die() -> void:
 func _respawn() -> void:
 	var point := global_position
 	var spawner := get_tree().get_first_node_in_group("spawner") if get_tree() != null else null
+	var spawner_hit := false
 	if spawner != null and spawner.has_method("spawn_points") and spawner.has_method("live_enemy_positions"):
 		var points: Array = spawner.call("spawn_points")
 		var enemies: Array = spawner.call("live_enemy_positions", self)
@@ -184,6 +196,14 @@ func _respawn() -> void:
 		var idx := Spawner.choose_spawn(pts, foes)
 		if idx >= 0 and idx < pts.size():
 			point = pts[idx]
+			spawner_hit = true
+	if not spawner_hit:
+		if _last_safe_position.y < KILL_Y:
+			point = _last_safe_position
+		else:
+			point = _config_respawn_point()
+	if point.y >= KILL_Y:
+		point = _config_respawn_point()
 	global_position = point
 	hp = max_hp
 	velocity = Vector2.ZERO
@@ -199,6 +219,17 @@ func _respawn_delay_ticks() -> int:
 	if cfg.load(SPAWN_CONFIG_PATH) != OK:
 		return Health.RESPAWN_TICKS
 	return int(cfg.get_value("respawn", "delay_ticks", Health.RESPAWN_TICKS))
+
+
+func _config_respawn_point() -> Vector2:
+	var cfg := ConfigFile.new()
+	if cfg.load(SPAWN_CONFIG_PATH) != OK:
+		return SAFE_FALLBACK
+	for i in 8:
+		var v: Vector2 = cfg.get_value("spawn%d" % i, "pos", Vector2.INF)
+		if v != Vector2.INF and v.y < KILL_Y:
+			return v
+	return SAFE_FALLBACK
 
 
 func add_weapon(id: String) -> bool:
