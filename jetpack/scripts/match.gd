@@ -25,6 +25,10 @@ signal soldier_respawned
 
 
 func _ready() -> void:
+	get_tree().paused = false
+	var pause_menu := get_node_or_null("Pause")
+	if pause_menu != null:
+		pause_menu.visible = false
 	_spawner = Spawner.new()
 	add_child(_spawner)
 	_manager = get_node_or_null("MatchManager") as MatchManager
