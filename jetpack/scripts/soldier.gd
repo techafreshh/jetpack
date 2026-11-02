@@ -397,9 +397,9 @@ static func _cfg_int(cfg: ConfigFile, section: String, key: String, fallback: in
 	return fallback
 
 
-func _load_spawn_config() -> void:
+func _load_spawn_config(path: String = SPAWN_CONFIG_PATH) -> void:
 	var cfg := ConfigFile.new()
-	if cfg.load(SPAWN_CONFIG_PATH) != OK:
+	if cfg.load(path) != OK:
 		push_warning("soldier: missing %s, using export defaults" % SPAWN_CONFIG_PATH)
 		return
 	_spawn_delay_ticks = _cfg_int(cfg, "respawn", "delay_ticks", Health.RESPAWN_TICKS)
