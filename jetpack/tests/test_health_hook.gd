@@ -90,4 +90,31 @@ func run_tests() -> void:
 	match_soldier.call("take_damage", 12.0)
 	await process_frame
 	check(is_equal_approx(float(host.get("last_hp")), 76.0), "match cache tracks second hit to 76 (got %f)" % float(host.get("last_hp")))
+	# (d) Match forwards death/respawn: kill-feed hook with cause and HP refresh.
+	var died_fwd := [0]
+	var respawned_fwd := [0]
+	host.connect("soldier_died", func() -> void: died_fwd[0] += 1)
+	host.connect("soldier_respawned", func() -> void: respawned_fwd[0] += 1)
+	check(int(host.get("death_count")) == 0, "match death_count starts at 0 (got %d)" % int(host.get("death_count")))
+	check(int(host.get("respawn_count")) == 0, "match respawn_count starts at 0 (got %d)" % int(host.get("respawn_count")))
+	match_soldier.call("take_damage", 200.0)
+	await process_frame
+	check(int(host.get("death_count")) == 1, "match death_count is 1 after lethal hit (got %d)" % int(host.get("death_count")))
+	check(str(host.get("last_death_cause")) == "damage", "match caches death cause damage (got %s)" % str(host.get("last_death_cause")))
+	check(died_fwd[0] == 1, "match soldier_died forwarded exactly once (got %d)" % died_fwd[0])
+	match_soldier.call("take_damage", 50.0)
+	await process_frame
+	check(int(host.get("death_count")) == 1, "post-death take_damage emits no second match death (got %d)" % int(host.get("death_count")))
+	check(died_fwd[0] == 1, "post-death soldier_died still exactly once (got %d)" % died_fwd[0])
+	var match_alive := false
+	for i in 220:
+		await physics_frame
+		if bool(match_soldier.get("is_alive")):
+			match_alive = true
+			break
+	check(match_alive, "match soldier respawns after lethal hit")
+	check(int(host.get("respawn_count")) == 1, "match respawn_count is 1 after respawn (got %d)" % int(host.get("respawn_count")))
+	check(respawned_fwd[0] == 1, "match soldier_respawned forwarded exactly once (got %d)" % respawned_fwd[0])
+	check(is_equal_approx(float(host.get("last_hp")), float(host.get("last_max_hp"))), "match HP cache refreshed to full on respawn (got %f / %f)" % [float(host.get("last_hp")), float(host.get("last_max_hp"))])
+	check(is_equal_approx(float(host.get("last_hp")), float(match_soldier.get("max_hp"))), "match HP cache equals soldier max_hp after respawn (got %f)" % float(host.get("last_hp")))
 	host.queue_free()
