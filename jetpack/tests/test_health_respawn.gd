@@ -111,6 +111,7 @@ func run_tests() -> void:
 	soldier.call("take_damage", 200.0)
 	check(not bool(soldier.get("is_alive")), "lethal damage clears is_alive")
 	check(died_count[0] == 1, "died emitted exactly once (got %d)" % died_count[0])
+	check(str(soldier.get("last_death_cause")) == "damage", "lethal damage records cause damage")
 	check_close(float(soldier.get("hp")), 0.0, 0.0001, "lethal damage leaves hp at 0")
 	var delay: int = soldier.get("respawn_ticks_left")
 	check(delay >= 170 and delay <= 190, "respawn countdown starts in 170-190 (got %d)" % delay)
