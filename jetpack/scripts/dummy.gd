@@ -34,6 +34,7 @@ func _process(delta: float) -> void:
 		if corpse_age >= corpse_lifetime:
 			queue_free()
 			return
+		return
 	if flash_t <= 0.0:
 		return
 	flash_t -= delta
@@ -56,6 +57,7 @@ func take_damage(amount: float) -> void:
 		collision_layer = 0
 		collision_mask = 0
 		corpse_age = 0.0
+		flash_t = 0.0
 		if visual != null:
 			visual.color = Color(0.45, 0.45, 0.48, 1.0)
 		remove_from_group("damageable")

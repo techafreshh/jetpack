@@ -54,8 +54,15 @@ func run_tests() -> void:
 	var died_count := [0]
 	dummy.connect("died", func() -> void: died_count[0] += 1)
 	check(float(dummy.get("hp")) > 0.0, "dummy starts alive (hp=%f)" % float(dummy.get("hp")))
+	var kill_visual := dummy.get_node("Visual") as Polygon2D
+	var kill_modulate_before := Color.WHITE
+	if kill_visual != null:
+		kill_modulate_before = kill_visual.modulate
 	for i in 10:
 		dummy.call("take_damage", 12.0)
+	check(float(dummy.get("flash_t")) == 0.0, "lethal hit leaves no pending flash (flash_t==0)")
+	check(kill_visual != null and kill_visual.color == Color(0.45, 0.45, 0.48, 1.0), "corpse born grey without hit-flash tint")
+	check(kill_visual != null and kill_visual.modulate == kill_modulate_before, "corpse modulate untinted by lethal hit")
 	check(float(dummy.get("hp")) <= 0.0, "10x12 dmg kills 100 HP dummy (hp=%f)" % float(dummy.get("hp")))
 	check(bool(dummy.get("is_dead")), "dummy is_dead after lethal damage")
 	check(died_count[0] == 1, "died emitted exactly once (got %d)" % died_count[0])
@@ -70,6 +77,11 @@ func run_tests() -> void:
 	check(float(dummy.get("corpse_age")) == 0.0, "corpse timer armed at 0 on death")
 	await process_frame
 	check(is_instance_valid(dummy) and not dummy.is_queued_for_deletion(), "corpse still valid the frame after death")
+	for i in 15:
+		await process_frame
+	check(float(dummy.get("flash_t")) == 0.0, "corpse stays flash-free across flash window")
+	check(kill_visual != null and kill_visual.color == Color(0.45, 0.45, 0.48, 1.0), "corpse stays grey across flash window")
+	check(is_instance_valid(dummy) and not dummy.is_queued_for_deletion(), "corpse still valid after flash window")
 
 	# Flash contract: a fresh hit whitens the visual and arms flash_t.
 	var flash_dummy := dummy_packed.instantiate() as StaticBody2D
