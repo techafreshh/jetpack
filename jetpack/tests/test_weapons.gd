@@ -156,6 +156,105 @@ func run_tests() -> void:
 		check(float(gw.get("_cooldown")) > 0.0, "fire_rate 1.0 arms cooldown")
 		gw.free()
 
+	# damage is editor-guarded: below-range and non-finite assignments
+	# clamp to the minimum, over-range clamps to the maximum, and
+	# shipped values pass through untouched.
+	for bad_damage in [-50.0, 0.0, INF, -INF, NAN]:
+		var bad_d := WeaponResource.new()
+		bad_d.damage = bad_damage
+		check_close(float(bad_d.damage), WeaponResource.MIN_DAMAGE, 0.0001, "damage %f clamps to minimum" % bad_damage)
+	var hot_d := WeaponResource.new()
+	hot_d.damage = 1000.0
+	check_close(float(hot_d.damage), WeaponResource.MAX_DAMAGE, 0.0001, "damage 1000.0 clamps to maximum")
+	for ok_damage in [5.0, 12.0, 50.0]:
+		var ok_d := WeaponResource.new()
+		ok_d.damage = ok_damage
+		check_close(float(ok_d.damage), ok_damage, 0.0001, "damage %f passes through" % ok_damage)
+
+	# spread_deg is editor-guarded: negative and non-finite cones clamp
+	# to the minimum, absurd cones clamp to the maximum, and shipped
+	# values pass through untouched.
+	for bad_spread in [-10.0, INF, -INF, NAN]:
+		var bad_s := WeaponResource.new()
+		bad_s.spread_deg = bad_spread
+		check_close(float(bad_s.spread_deg), WeaponResource.MIN_SPREAD_DEG, 0.0001, "spread_deg %f clamps to minimum" % bad_spread)
+	var hot_s := WeaponResource.new()
+	hot_s.spread_deg = 720.0
+	check_close(float(hot_s.spread_deg), WeaponResource.MAX_SPREAD_DEG, 0.0001, "spread_deg 720.0 clamps to maximum")
+	for ok_spread in [0.4, 2.0, 12.0]:
+		var ok_s := WeaponResource.new()
+		ok_s.spread_deg = ok_spread
+		check_close(float(ok_s.spread_deg), ok_spread, 0.0001, "spread_deg %f passes through" % ok_spread)
+
+	# range is editor-guarded: degenerate and non-finite rays clamp to
+	# the minimum, sightline typos clamp to the maximum, and shipped
+	# values pass through untouched.
+	for bad_range in [-100.0, 0.0, INF, -INF, NAN]:
+		var bad_r := WeaponResource.new()
+		bad_r.range = bad_range
+		check_close(float(bad_r.range), WeaponResource.MIN_RANGE, 0.0001, "range %f clamps to minimum" % bad_range)
+	var hot_r := WeaponResource.new()
+	hot_r.range = 1e9
+	check_close(float(hot_r.range), WeaponResource.MAX_RANGE, 0.0001, "range 1e9 clamps to maximum")
+	for ok_range in [500.0, 1200.0, 2000.0]:
+		var ok_r := WeaponResource.new()
+		ok_r.range = ok_range
+		check_close(float(ok_r.range), ok_range, 0.0001, "range %f passes through" % ok_range)
+
+	# mag_size is editor-guarded: zero and negative mags clamp to the
+	# minimum, belt-fed typos clamp to the maximum, and shipped values
+	# pass through untouched.
+	for bad_mag in [0, -10]:
+		var bad_m := WeaponResource.new()
+		bad_m.mag_size = bad_mag
+		check(int(bad_m.mag_size) == WeaponResource.MIN_MAG_SIZE, "mag_size %d clamps to minimum" % bad_mag)
+	var hot_m := WeaponResource.new()
+	hot_m.mag_size = 10000
+	check(int(hot_m.mag_size) == WeaponResource.MAX_MAG_SIZE, "mag_size 10000 clamps to maximum")
+	for ok_mag in [5, 6, 30]:
+		var ok_m := WeaponResource.new()
+		ok_m.mag_size = ok_mag
+		check(int(ok_m.mag_size) == ok_mag, "mag_size %d passes through" % ok_mag)
+
+	# zoom is editor-guarded: sub-identity and non-finite scopes clamp
+	# to the minimum, absurd scopes clamp to the maximum, and shipped
+	# values pass through untouched.
+	for bad_zoom in [0.0, 0.5, -2.0, INF, -INF, NAN]:
+		var bad_z := WeaponResource.new()
+		bad_z.zoom = bad_zoom
+		check_close(float(bad_z.zoom), WeaponResource.MIN_ZOOM, 0.0001, "zoom %f clamps to minimum" % bad_zoom)
+	var hot_z := WeaponResource.new()
+	hot_z.zoom = 100.0
+	check_close(float(hot_z.zoom), WeaponResource.MAX_ZOOM, 0.0001, "zoom 100.0 clamps to maximum")
+	for ok_zoom in [1.0, 2.5]:
+		var ok_z := WeaponResource.new()
+		ok_z.zoom = ok_zoom
+		check_close(float(ok_z.zoom), ok_zoom, 0.0001, "zoom %f passes through" % ok_zoom)
+
+	# Clamped-bad resources stay usable: equip arms a fireable gun and
+	# get_zoom reports the clamped scope.
+	var clamped := WeaponResource.new()
+	clamped.damage = -25.0
+	clamped.spread_deg = 720.0
+	clamped.range = -500.0
+	clamped.mag_size = 0
+	clamped.zoom = 0.0
+	clamped.fire_rate = 1.0
+	clamped.reserve = 90
+	check_close(float(clamped.damage), WeaponResource.MIN_DAMAGE, 0.0001, "clamped driver damage is minimum")
+	check_close(float(clamped.spread_deg), WeaponResource.MAX_SPREAD_DEG, 0.0001, "clamped driver spread is maximum")
+	check_close(float(clamped.range), WeaponResource.MIN_RANGE, 0.0001, "clamped driver range is minimum")
+	check(int(clamped.mag_size) == WeaponResource.MIN_MAG_SIZE, "clamped driver mag is minimum")
+	check_close(float(clamped.zoom), WeaponResource.MIN_ZOOM, 0.0001, "clamped driver zoom is minimum")
+	var cw = make_weapon()
+	if cw == null:
+		return
+	cw.call("equip", clamped)
+	check(bool(cw.call("can_fire")), "clamped driver can_fire")
+	check(bool(cw.call("consume_shot")), "clamped driver consume succeeds")
+	check_close(float(cw.call("get_zoom")), WeaponResource.MIN_ZOOM, 0.0001, "clamped driver zoom matches stats")
+	cw.free()
+
 	# Direct-API cooldown: consume_shot owns the rate gate.
 	var cd = make_weapon()
 	if cd != null:
