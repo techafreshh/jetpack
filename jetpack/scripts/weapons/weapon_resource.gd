@@ -20,6 +20,10 @@ const MIN_MAG_SIZE := 1
 const MAX_MAG_SIZE := 100
 const MIN_ZOOM := 1.0
 const MAX_ZOOM := 8.0
+## Last-resort refusal for direct-storage/bulk-load smuggles: only
+## sub-MIN or non-finite rates refuse; over-MAX rates stay fireable.
+static func is_fireable_rate(rate: float) -> bool:
+	return is_finite(rate) and rate >= MIN_FIRE_RATE
 # Edit-time damage guard: same clamp-and-warn idiom as fire_rate, so a
 # typo'd .tres can never silently heal via Health.apply_damage.
 @export_range(1.0, 200.0, 0.5) var damage: float = 10.0:

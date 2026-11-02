@@ -40,7 +40,7 @@ func equip(r: WeaponResource) -> void:
 
 
 func _report_bad_rate() -> void:
-	if stats != null and stats.fire_rate <= 0.0:
+	if stats != null and not WeaponResource.is_fireable_rate(stats.fire_rate):
 		push_error("weapon: invalid fire_rate %f, refusing to fire" % stats.fire_rate)
 
 
@@ -55,7 +55,7 @@ func can_fire() -> bool:
 		return false
 	if ammo <= 0:
 		return false
-	if stats.fire_rate <= 0.0:
+	if not WeaponResource.is_fireable_rate(stats.fire_rate):
 		return false
 	return _cooldown <= 0.0
 
@@ -70,7 +70,7 @@ func consume_shot() -> bool:
 	if _cooldown > 0.0:
 		return false
 	var rate: float = stats.fire_rate
-	if rate <= 0.0:
+	if not WeaponResource.is_fireable_rate(rate):
 		push_error("weapon: invalid fire_rate %f, refusing to fire" % rate)
 		return false
 	ammo -= 1
