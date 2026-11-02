@@ -3,7 +3,8 @@ extends Node
 ## Enemy-aware respawn selection: pure argmax over spawn points of the
 ## minimum distance to any live enemy. Thin tree helpers collect spawn
 ## points (greybox Spawn* markers overridden by spawns.cfg) and live-enemy
-## positions (the damageable group filtered to alive, excluding self).
+## positions (live soldiers only: damageable nodes exposing a true is_alive;
+## dummies never count as foes, alive or dead).
 
 const CONFIG_PATH := "res://resources/config/spawns.cfg"
 
@@ -75,8 +76,7 @@ func live_enemy_positions(exclude: Node = null) -> Array[Vector2]:
 		if node.has_method("get") and "is_alive" in node:
 			if not bool(node.get("is_alive")):
 				continue
-		elif "is_dead" in node:
-			if bool(node.get("is_dead")):
-				continue
+		else:
+			continue
 		out.append((node as Node2D).global_position)
 	return out
