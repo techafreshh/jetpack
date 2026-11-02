@@ -144,6 +144,33 @@ func run_tests() -> void:
 	check(float(far_dummy.get("hp")) == far_hp0, "out-of-radius blast spares dummy (hp=%f)" % float(far_dummy.get("hp")))
 	boom2.queue_free()
 
+	# Race backup: an externally-flagged-but-grouped dummy is skipped by the
+	# Health.is_dead guard even though group-leave never ran.
+	var race_dummy := dummy_packed.instantiate() as StaticBody2D
+	root.add_child(race_dummy)
+	await process_frame
+	await process_frame
+	race_dummy.global_position = blast_centre
+	var race_died := [0]
+	race_dummy.connect("died", func() -> void: race_died[0] += 1)
+	race_dummy.set("is_dead", true)
+	var race_hp0 := float(race_dummy.get("hp"))
+	var race_pos0: Vector2 = race_dummy.global_position
+	check_close(race_hp0, float(race_dummy.get("max_hp")), 0.001, "race dummy keeps full HP when flagged")
+	check(race_dummy.is_in_group("damageable"), "flagged dummy still grouped before race blast")
+	check(Health.is_dead(race_dummy), "externally-flagged dummy reads dead")
+	var boom3 := EXPLOSION_SCRIPT.new() as Node2D
+	root.add_child(boom3)
+	boom3.global_position = blast_centre
+	boom3.call("detonate")
+	check_close(float(race_dummy.get("hp")), race_hp0, 0.001, "flagged-but-grouped blast deals no damage")
+	check((race_dummy.global_position as Vector2).distance_to(race_pos0) < 1.0, "flagged-but-grouped blast applies no drift")
+	check(race_died[0] == 0, "flagged-but-grouped blast emits no died")
+	check(race_dummy.is_in_group("damageable"), "flagged dummy still grouped after race blast")
+	boom3.queue_free()
+	race_dummy.set("is_dead", false)
+	race_dummy.queue_free()
+
 	# Tracer volume: hold fire 66 physics ticks for >=10 genuine
 	# weapon-child Line2D tracers (soldier ArcPreview excluded). A 0.1 s
 	# cooldown clears every 7th physics tick, so 60 ticks yield only 9
