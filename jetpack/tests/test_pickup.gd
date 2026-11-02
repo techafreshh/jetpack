@@ -219,6 +219,27 @@ func run_tests() -> void:
 	nade_pad.queue_free()
 	await process_frame
 
+	# (d3) Full-grenade walkover is ignored and the pad stays armed.
+	var full_nade_pad = await make_pickup("grenade", "scatter", 10.0)
+	check(full_nade_pad != null, "full-grenade pad instantiates")
+	soldier.set("grenade_count", int(soldier.get("grenade_max")))
+	var full_nades_before := int(soldier.get("grenade_count"))
+	check(not bool(full_nade_pad.call("apply_to", soldier)), "full-grenade apply_to returns false")
+	check(not bool(full_nade_pad.get("disabled")), "full-grenade pad stays enabled")
+	check_close(float(full_nade_pad.get("time_left")), 0.0, 0.01, "full-grenade pad sets no timer")
+	var full_nade_label = full_nade_pad.get_node_or_null("TimerLabel")
+	check(full_nade_label != null and String(full_nade_label.get("text")) == "", "full-grenade pad shows no timer label")
+	check(int(soldier.get("grenade_count")) == full_nades_before, "full-grenade walkover leaves count unchanged")
+	# Same pad still consumes normally once the soldier is below max.
+	soldier.set("grenade_count", 0)
+	check(bool(full_nade_pad.call("apply_to", soldier)), "empty apply_to on same grenade pad returns true")
+	check(int(soldier.get("grenade_count")) == int(soldier.get("grenade_max")), "same grenade pad restores max once empty")
+	check(bool(full_nade_pad.get("disabled")), "same grenade pad enters disabled state")
+	var full_nade_label2 = full_nade_pad.get_node_or_null("TimerLabel")
+	check(full_nade_label2 != null and String(full_nade_label2.get("text")) != "", "consumed grenade pad shows timer label")
+	full_nade_pad.queue_free()
+	await process_frame
+
 	# (e) Short-timer pad re-enables after expiry and clears the label.
 	var quick = await make_pickup("health", "scatter", 0.3)
 	soldier.set("hp", 50.0)
