@@ -75,10 +75,22 @@ func run_tests() -> void:
 	root.add_child(flash_dummy)
 	await process_frame
 	await process_frame
-	flash_dummy.call("take_damage", 10.0)
 	var visual := flash_dummy.get_node("Visual") as Polygon2D
+	check(visual != null, "flash dummy exposes Visual")
+	var modulate_before := Color.WHITE
+	var flash_base: Color = flash_dummy.get("_base_color")
+	if visual != null:
+		modulate_before = visual.modulate
+	flash_dummy.call("take_damage", 10.0)
 	check(float(flash_dummy.get("flash_t")) > 0.0, "hit arms flash_t (got %f)" % float(flash_dummy.get("flash_t")))
-	check(visual != null and (visual.modulate == Color.WHITE or visual.color == Color.WHITE), "hit whitens dummy visual")
+	check(visual != null and visual.color == Color.WHITE, "hit whitens dummy visual via color")
+	check(visual != null and visual.modulate == modulate_before, "hit leaves modulate untouched")
+	var flash_ticks := 0
+	while float(flash_dummy.get("flash_t")) > 0.0 and flash_ticks < 60:
+		await process_frame
+		flash_ticks += 1
+	await process_frame
+	check(visual != null and visual.color == flash_base, "flash restores base color via color")
 
 	# Blast contract: radial blasts hit dummies in the damageable group.
 	var blast_dummy := dummy_packed.instantiate() as StaticBody2D

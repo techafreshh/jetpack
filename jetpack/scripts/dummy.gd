@@ -39,7 +39,6 @@ func _process(delta: float) -> void:
 	flash_t -= delta
 	if flash_t <= 0.0 and not is_dead and _visual != null:
 		_visual.color = _base_color
-		_visual.modulate = Color.WHITE
 
 
 func take_damage(amount: float) -> void:
@@ -50,7 +49,6 @@ func take_damage(amount: float) -> void:
 	var visual := _visual if _visual != null else get_node_or_null("Visual") as Polygon2D
 	if visual != null:
 		visual.color = Color.WHITE
-		visual.modulate = Color.WHITE
 	flash_t = 0.1
 	if hp <= 0.0:
 		is_dead = true
