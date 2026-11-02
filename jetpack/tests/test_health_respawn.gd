@@ -120,6 +120,13 @@ func run_tests() -> void:
 	check(died_count[0] == 1, "post-death take_damage emits no second died")
 	check_close(float(soldier.get("hp")), 0.0, 0.0001, "post-death hp stays 0")
 	check(not bool(soldier.call("throw_grenade")), "dead soldier cannot throw grenades")
+	# Corpse knockback is a silent no-op: velocity stays frozen.
+	soldier.set("velocity", Vector2.ZERO)
+	soldier.call("apply_knockback", Vector2(300.0, -200.0))
+	var corpse_vel := soldier.get("velocity") as Vector2
+	check(corpse_vel.length() < 0.01, "post-death knockback leaves velocity frozen (drift %f)" % corpse_vel.length())
+	check(died_count[0] == 1, "post-death knockback emits no second died")
+	check(not bool(soldier.get("is_alive")), "post-death knockback keeps is_alive false")
 	var respawn_tick := -1
 	for i in 220:
 		await physics_frame
