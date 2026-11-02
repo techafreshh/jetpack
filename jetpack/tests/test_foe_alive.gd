@@ -1,7 +1,8 @@
 extends SceneTree
 ## Headless regression for the shared foe-alive idiom: Health holds the one
 ## `"is_alive" in` duck-type check (has_alive_flag) with strict (is_live_foe)
-## and permissive (is_host_alive) wrappers; weapon.gd and spawner.gd delegate.
+## and permissive (is_host_alive) wrappers; weapon.gd, spawner.gd and
+## explosion.gd delegate.
 ## Run: godot --headless --path jetpack --script res://tests/test_foe_alive.gd
 
 var passed := 0
@@ -139,12 +140,15 @@ func run_tests() -> void:
 	dummy.queue_free()
 	await process_frame
 
-	# (b) Single-source delegation: weapon/spawner hold no literal, health holds one.
+	# (b) Single-source delegation: weapon/spawner/explosion hold no literal, health holds one.
 	var weapon_text := read_source("res://scripts/weapons/weapon.gd")
 	var spawner_text := read_source("res://scripts/match/spawner.gd")
+	var explosion_text := read_source("res://scripts/fx/explosion.gd")
 	var health_text := read_source("res://scripts/health.gd")
 	check(not weapon_text.contains("\"is_alive\" in"), "weapon.gd holds no is_alive idiom literal")
 	check(not spawner_text.contains("\"is_alive\" in"), "spawner.gd holds no is_alive idiom literal")
+	check(not explosion_text.contains("\"is_alive\" in"), "explosion.gd holds no is_alive idiom literal")
 	check(weapon_text.contains("Health.is_host_alive"), "weapon.gd delegates to Health.is_host_alive")
 	check(spawner_text.contains("Health.is_live_foe"), "spawner.gd delegates to Health.is_live_foe")
+	check(explosion_text.contains("Health.is_host_alive"), "explosion.gd delegates to Health.is_host_alive")
 	check(health_text.count("\"is_alive\" in") == 1, "health.gd holds the idiom exactly once")
