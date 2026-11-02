@@ -96,6 +96,9 @@ func apply_to(body: Node) -> bool:
 				print("PICKUP weapon granted %s" % wid)
 			else:
 				return false
+	if is_inside_tree():
+		Sfx.ensure_buses()
+		get_tree().call_group("sfx", "play_sfx", "pickup")
 	_disable()
 	return true
 

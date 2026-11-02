@@ -4,6 +4,7 @@ extends CharacterBody2D
 ## control. Fixed 60 Hz physics; tunables load from movement.cfg over exports.
 ## Falling below KILL_Y (arena safety net under the wall bottoms) kills via _die().
 
+const FX_CONFIG_PATH := "res://resources/config/fx.cfg"
 const CONFIG_PATH := "res://resources/config/movement.cfg"
 const GRENADE_CONFIG_PATH := "res://resources/config/grenade.cfg"
 const SPAWN_CONFIG_PATH := "res://resources/config/spawns.cfg"
@@ -73,6 +74,8 @@ signal respawned
 var fuel: float = 100.0
 var crouched: bool = false
 var thrusting: bool = false
+var _trail: CPUParticles2D
+var _flash_ticks := 0
 # Script-level aim override for headless tests: the display server has no
 # cursor headlessly, so steer aim via this seam.
 var aim_override := Vector2.ZERO
@@ -106,6 +109,7 @@ func _ready() -> void:
 		if rect != null:
 			_stand_h = rect.size.y
 	fuel = fuel_max
+	_build_trail()
 	if pilot == null:
 		pilot = HumanPilot.new()
 		add_child(pilot)
@@ -120,7 +124,13 @@ func _record_safe_position() -> void:
 
 
 func _physics_process(delta: float) -> void:
+	if _flash_ticks > 0:
+		_flash_ticks -= 1
+		if _flash_ticks <= 0 and _visual != null:
+			_visual.modulate = Color.WHITE
 	if not is_alive:
+		if _trail != null:
+			_trail.emitting = false
 		respawn_ticks_left -= 1
 		if respawn_ticks_left <= 0:
 			respawn_ticks_left = 0
@@ -161,6 +171,8 @@ func apply_command(cmd: Pilot.Command, delta: float) -> void:
 				_set_crouched(false)
 
 	thrusting = cmd.fly and fuel > 0.0
+	if _trail != null:
+		_trail.emitting = thrusting and is_alive
 
 	var burn_rate := fuel_max / fuel_burn_s
 	if not was_floor:
@@ -212,8 +224,16 @@ func take_damage(amount: float, attacker: String = "") -> void:
 		_last_attacker = attacker
 	hp = Health.apply_damage(hp, amount)
 	health_changed.emit(hp, max_hp)
+	if is_inside_tree():
+		Sfx.ensure_buses()
+		get_tree().call_group("sfx", "play_sfx", "hit")
+		HitStop.trigger(get_tree())
 	if hp <= 0.0:
 		_die("damage")
+		return
+	_flash_ticks = 3
+	if _visual != null:
+		_visual.modulate = Color(3.0, 3.0, 3.0, 1.0)
 
 
 func apply_knockback(impulse: Vector2) -> void:
@@ -242,7 +262,40 @@ func respawn_seconds_left() -> float:
 	return float(respawn_ticks_left) / 60.0
 
 
+func _build_trail() -> void:
+	if _trail != null:
+		return
+	var amount := 24
+	var cfg := ConfigFile.new()
+	if cfg.load(FX_CONFIG_PATH) == OK:
+		var raw: Variant = cfg.get_value("trail", "amount", amount)
+		if raw is int:
+			amount = maxi(8, raw)
+		elif raw is float and is_finite(raw):
+			amount = maxi(8, int(raw))
+	var trail := CPUParticles2D.new()
+	trail.name = "JetpackTrail"
+	trail.amount = amount
+	trail.lifetime = 0.4
+	trail.emission_shape = CPUParticles2D.EMISSION_SHAPE_SPHERE
+	trail.emission_sphere_radius = 6.0
+	trail.position = Vector2(0, -8)
+	trail.direction = Vector2(0, 1)
+	trail.spread = 25.0
+	trail.initial_velocity_min = 120.0
+	trail.initial_velocity_max = 220.0
+	trail.gravity = Vector2.ZERO
+	trail.scale_amount_min = 2.0
+	trail.scale_amount_max = 4.0
+	trail.color = Color(1.0, 0.6, 0.15, 0.8)
+	trail.emitting = false
+	add_child(trail)
+	_trail = trail
+
+
 func _die(cause: String = "damage") -> void:
+	if _trail != null:
+		_trail.emitting = false
 	is_alive = false
 	respawn_ticks_left = _respawn_delay_ticks()
 	velocity = Vector2.ZERO

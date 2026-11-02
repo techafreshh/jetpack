@@ -167,6 +167,8 @@ func rematch() -> void:
 	match_state = STATE_COUNTDOWN
 	_reposition_bots()
 	state_changed.emit(match_state)
+	if is_inside_tree():
+		get_tree().call_group("sfx", "play_sfx", "ui_click")
 	print("MATCH REMATCH")
 
 
@@ -208,6 +210,8 @@ func _enter_live() -> void:
 		return
 	match_state = STATE_LIVE
 	state_changed.emit(match_state)
+	if is_inside_tree():
+		get_tree().call_group("sfx", "play_sfx", "ui_click")
 	print("MATCH LIVE")
 
 
@@ -236,6 +240,8 @@ func _finish(winner: String) -> void:
 	match_state = STATE_RESULTS
 	state_changed.emit(match_state)
 	match_ended.emit(winner_id)
+	if is_inside_tree():
+		get_tree().call_group("sfx", "play_sfx", "ui_click")
 	print("MATCH ENDED winner=%s" % winner_id)
 	_push_run_state()
 

@@ -33,6 +33,16 @@ func detonate() -> void:
 	if _detonated:
 		return
 	_detonated = true
+	var burst := get_node_or_null("Burst") as CPUParticles2D
+	if burst != null:
+		burst.restart()
+	if is_inside_tree():
+		Sfx.ensure_buses()
+		get_tree().call_group("sfx", "play_sfx", "explosion")
+		get_tree().call_group("camera_shake", "add_shake", 1.0)
+	var fx_tree := get_tree()
+	if fx_tree != null:
+		HitStop.trigger(fx_tree)
 	var center := global_position
 	for node in get_tree().get_nodes_in_group("damageable"):
 		# Normally-killed dummies/soldiers already left damageable, so this
@@ -65,6 +75,7 @@ func detonate() -> void:
 
 
 func _build_visual() -> void:
+	_build_burst()
 	if _visual != null:
 		return
 	var ring := Polygon2D.new()
@@ -77,3 +88,26 @@ func _build_visual() -> void:
 	ring.polygon = pts
 	add_child(ring)
 	_visual = ring
+
+
+func _build_burst() -> void:
+	if has_node("Burst"):
+		return
+	var burst := CPUParticles2D.new()
+	burst.name = "Burst"
+	burst.amount = 32
+	burst.lifetime = 0.5
+	burst.one_shot = true
+	burst.explosiveness = 0.9
+	burst.emission_shape = CPUParticles2D.EMISSION_SHAPE_SPHERE
+	burst.emission_sphere_radius = 8.0
+	burst.direction = Vector2(0, -1)
+	burst.spread = 180.0
+	burst.initial_velocity_min = 200.0
+	burst.initial_velocity_max = 500.0
+	burst.gravity = Vector2(0, 400)
+	burst.scale_amount_min = 2.0
+	burst.scale_amount_max = 5.0
+	burst.color = Color(1.0, 0.7, 0.2, 1.0)
+	add_child(burst)
+	burst.emitting = false

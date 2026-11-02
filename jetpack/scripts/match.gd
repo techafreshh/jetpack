@@ -22,6 +22,7 @@ signal soldier_respawned
 
 @onready var _soldier: CharacterBody2D = $Soldier
 @onready var _spawn0: Marker2D = $Greybox/Spawn0
+@onready var camera_shake: Camera2D = get_node_or_null("CameraShake") as Camera2D
 
 
 func _ready() -> void:
