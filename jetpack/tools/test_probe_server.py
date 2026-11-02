@@ -11,7 +11,10 @@ import unittest
 from http.server import ThreadingHTTPServer
 from pathlib import Path
 
-from probe_server import HEALTH_BODY, HEALTH_PATH, ProbeHandler, HOST, PORT
+try:
+    from jetpack.tools.probe_server import HEALTH_BODY, HEALTH_PATH, ProbeHandler, HOST, PORT
+except ImportError:
+    from probe_server import HEALTH_BODY, HEALTH_PATH, ProbeHandler, HOST, PORT
 
 PROBE_SCRIPT = Path(__file__).with_name("probe_server.py")
 
