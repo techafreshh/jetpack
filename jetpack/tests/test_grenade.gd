@@ -218,7 +218,7 @@ func run_tests() -> void:
 	soldier.call("take_damage", 200.0)
 	check(not bool(soldier.get("is_alive")), "corpse setup: lethal damage kills soldier")
 	check(corpse_died[0] == 1, "corpse setup: died emitted once (got %d)" % corpse_died[0])
-	check(soldier.is_in_group("damageable"), "corpse stays in damageable group through respawn window")
+	check(not soldier.is_in_group("damageable"), "dead soldier leaves damageable group")
 	var corpse_hp0: float = soldier.get("hp")
 	var corpse_vel0: Vector2 = soldier.get("velocity")
 	var nade3 := nade_packed.instantiate() as RigidBody2D

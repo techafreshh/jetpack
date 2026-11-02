@@ -111,6 +111,18 @@ func run_tests() -> void:
 	soldier.call("take_damage", 200.0)
 	check(not bool(soldier.get("is_alive")), "lethal damage clears is_alive")
 	check(died_count[0] == 1, "died emitted exactly once (got %d)" % died_count[0])
+	check(not soldier.is_in_group("damageable"), "dead soldier leaves damageable group")
+	var dummy_packed := load("res://scenes/dummy.tscn") as PackedScene
+	check(dummy_packed != null, "dummy.tscn loads for group-count probe")
+	var probe_dummy := dummy_packed.instantiate() as StaticBody2D
+	root.add_child(probe_dummy)
+	await process_frame
+	await process_frame
+	var live_set := get_nodes_in_group("damageable")
+	check(probe_dummy in live_set, "group enumeration sees live dummy beside corpse")
+	check(not (soldier in live_set), "group enumeration hides dead soldier corpse")
+	probe_dummy.queue_free()
+	await process_frame
 	check(str(soldier.get("last_death_cause")) == "damage", "lethal damage records cause damage")
 	check_close(float(soldier.get("hp")), 0.0, 0.0001, "lethal damage leaves hp at 0")
 	var delay: int = soldier.get("respawn_ticks_left")
@@ -135,6 +147,7 @@ func run_tests() -> void:
 			break
 	check(respawn_tick >= 170 and respawn_tick <= 190, "respawn flips is_alive in 170-190 ticks (got %d)" % respawn_tick)
 	check(respawned_count[0] == 1, "respawned emitted exactly once (got %d)" % respawned_count[0])
+	check(soldier.is_in_group("damageable"), "respawned soldier rejoins damageable group")
 	check_close(float(soldier.get("hp")), float(soldier.get("max_hp")), 0.0001, "respawn restores full HP")
 	check_close(float(soldier.call("respawn_seconds_left")), 0.0, 0.01, "respawn_seconds_left is 0 after respawn")
 	check(int(soldier.collision_layer) != 0 and int(soldier.collision_mask) != 0, "respawn restores collision")
