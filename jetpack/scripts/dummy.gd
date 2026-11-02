@@ -53,6 +53,9 @@ func take_damage(amount: float) -> void:
 	flash_t = 0.1
 	if hp <= 0.0:
 		is_dead = true
+		# Authoritative corpse exclusion is leaving damageable below (mirrors
+		# soldier _die); the is_dead flag backs the explosion skip for
+		# out-of-band flags and re-added-member races.
 		# Let later rays pass through the corpse.
 		collision_layer = 0
 		collision_mask = 0

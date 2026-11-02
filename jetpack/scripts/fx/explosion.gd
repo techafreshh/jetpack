@@ -35,6 +35,8 @@ func detonate() -> void:
 	_detonated = true
 	var center := global_position
 	for node in get_tree().get_nodes_in_group("damageable"):
+		# Normally-killed dummies/soldiers already left damageable, so this
+		# skip is backup for externally-set flags and re-added members.
 		if Health.is_dead(node):
 			continue
 		if not Health.is_host_alive(node):
