@@ -86,6 +86,8 @@ func consume_shot() -> bool:
 func reload() -> bool:
 	if stats == null:
 		return false
+	if not _host_alive():
+		return false
 	if reserve_left <= 0:
 		return false
 	if ammo >= stats.mag_size:
