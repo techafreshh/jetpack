@@ -223,7 +223,7 @@ func run_tests() -> void:
 	Input.action_press("fire")
 	await wait_physics(120)
 	var held := live_tracers_of(weapon).size()
-	check(held >= 10, "1 s hold leaves >=10 live tracers (got %d)" % held)
+	check(held >= 10, "2 s hold leaves >=10 live tracers (got %d)" % held)
 	# Weapon-children filter excludes the soldier ArcPreview Line2D.
 	var arc := soldier.get_node_or_null("ArcPreview") as Line2D
 	check(arc != null, "ArcPreview Line2D exists")

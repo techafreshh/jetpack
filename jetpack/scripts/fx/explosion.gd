@@ -33,6 +33,9 @@ func detonate() -> void:
 	if _detonated:
 		return
 	_detonated = true
+	var burst := get_node_or_null("Burst") as CPUParticles2D
+	if burst != null:
+		burst.restart()
 	if is_inside_tree():
 		Sfx.ensure_buses()
 		get_tree().call_group("sfx", "play_sfx", "explosion")
@@ -107,4 +110,4 @@ func _build_burst() -> void:
 	burst.scale_amount_max = 5.0
 	burst.color = Color(1.0, 0.7, 0.2, 1.0)
 	add_child(burst)
-	burst.emitting = true
+	burst.emitting = false

@@ -55,6 +55,9 @@ static func ensure_buses() -> void:
 		if AudioServer.get_bus_index(bus) == -1:
 			AudioServer.add_bus()
 			AudioServer.set_bus_name(AudioServer.bus_count - 1, bus)
+		var idx := AudioServer.get_bus_index(bus)
+		if idx > 0:
+			AudioServer.set_bus_send(idx, "Master")
 
 
 static func set_bus_volume01(bus: String, v: float) -> void:
