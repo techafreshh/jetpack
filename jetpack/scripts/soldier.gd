@@ -160,6 +160,8 @@ func take_damage(amount: float) -> void:
 
 
 func apply_knockback(impulse: Vector2) -> void:
+	if not is_alive:
+		return
 	velocity += impulse
 
 
