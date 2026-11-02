@@ -173,6 +173,7 @@ func add_grenades(n: int) -> int:
 
 func heal(amount: float) -> float:
 	hp = Health.heal_to(hp, max_hp, amount)
+	health_changed.emit(hp, max_hp)
 	return hp
 
 
