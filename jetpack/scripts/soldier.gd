@@ -41,6 +41,10 @@ var grenade_count := 2
 var grenade_max := 2
 var hp := 100.0
 var max_hp := 100.0
+## Killer attribution seam: optional attacker id from the last damaging hit.
+## Cleared on respawn; falls back to "" (HUD shows "the arena").
+var last_killer := ""
+var _last_attacker := ""
 var is_alive := true:
 	set(value):
 		is_alive = value
@@ -201,9 +205,11 @@ func _switch_to(idx: int) -> void:
 	add_weapon(slots[idx])
 
 
-func take_damage(amount: float) -> void:
+func take_damage(amount: float, attacker: String = "") -> void:
 	if not is_alive:
 		return
+	if attacker != "":
+		_last_attacker = attacker
 	hp = Health.apply_damage(hp, amount)
 	health_changed.emit(hp, max_hp)
 	if hp <= 0.0:
@@ -243,6 +249,7 @@ func _die(cause: String = "damage") -> void:
 	collision_layer = 0
 	collision_mask = 0
 	last_death_cause = cause
+	last_killer = _last_attacker
 	remove_from_group("damageable")
 	died.emit()
 	print("SOLDIER DIED")
@@ -279,6 +286,8 @@ func _respawn() -> void:
 	collision_layer = _saved_layer
 	collision_mask = _saved_mask
 	is_alive = true
+	last_killer = ""
+	_last_attacker = ""
 	add_to_group("damageable")
 	respawned.emit()
 	print("SOLDIER RESPAWNED")
