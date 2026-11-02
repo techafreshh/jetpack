@@ -106,6 +106,10 @@ func run_tests() -> void:
 	var respawned_count := [0]
 	soldier.connect("died", func() -> void: died_count[0] += 1)
 	soldier.connect("respawned", func() -> void: respawned_count[0] += 1)
+	# Signal-only HP subscriber: must converge to full HP on respawn via
+	# health_changed alone, without polling the soldier directly.
+	var respawn_hp_events: Array = []
+	soldier.connect("health_changed", func(hp_v: float, max_hp_v: float) -> void: respawn_hp_events.append(Vector2(hp_v, max_hp_v)))
 	soldier.set("hp", 100.0)
 	soldier.set("velocity", Vector2.ZERO)
 	soldier.call("take_damage", 200.0)
@@ -125,6 +129,12 @@ func run_tests() -> void:
 	await process_frame
 	check(str(soldier.get("last_death_cause")) == "damage", "lethal damage records cause damage")
 	check_close(float(soldier.get("hp")), 0.0, 0.0001, "lethal damage leaves hp at 0")
+	var hp_events_at_death := respawn_hp_events.size()
+	var full_hp_before_respawn := false
+	for e in respawn_hp_events:
+		if absf((e as Vector2).x - float(soldier.get("max_hp"))) < 0.0001 and absf((e as Vector2).y - float(soldier.get("max_hp"))) < 0.0001:
+			full_hp_before_respawn = true
+	check(not full_hp_before_respawn, "no full-HP health_changed before respawn")
 	var delay: int = soldier.get("respawn_ticks_left")
 	check(delay >= 170 and delay <= 190, "respawn countdown starts in 170-190 (got %d)" % delay)
 	# Post-death hits are ignored.
@@ -158,6 +168,10 @@ func run_tests() -> void:
 	check(respawned_count[0] == 1, "respawned emitted exactly once (got %d)" % respawned_count[0])
 	check(soldier.is_in_group("damageable"), "respawned soldier rejoins damageable group")
 	check_close(float(soldier.get("hp")), float(soldier.get("max_hp")), 0.0001, "respawn restores full HP")
+	check(respawn_hp_events.size() == hp_events_at_death + 1, "respawn emits health_changed exactly once (got %d, want %d)" % [respawn_hp_events.size() - hp_events_at_death, 1])
+	var last_hp_event := respawn_hp_events.back() as Vector2
+	check_close(last_hp_event.x, float(soldier.get("max_hp")), 0.0001, "respawn health_changed carries full hp")
+	check_close(last_hp_event.y, float(soldier.get("max_hp")), 0.0001, "respawn health_changed carries max_hp")
 	check_close(float(soldier.call("respawn_seconds_left")), 0.0, 0.01, "respawn_seconds_left is 0 after respawn")
 	check(int(soldier.collision_layer) != 0 and int(soldier.collision_mask) != 0, "respawn restores collision")
 	# Soldier fights again after respawn.

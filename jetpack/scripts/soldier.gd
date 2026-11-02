@@ -221,6 +221,7 @@ func _respawn() -> void:
 		point = _config_respawn_point()
 	global_position = point
 	hp = max_hp
+	health_changed.emit(hp, max_hp)
 	velocity = Vector2.ZERO
 	collision_layer = _saved_layer
 	collision_mask = _saved_mask
