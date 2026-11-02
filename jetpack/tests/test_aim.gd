@@ -128,4 +128,11 @@ func run_tests() -> void:
 	var w_back = weapon.call("_aim_point") as Vector2
 	check(w_back.distance_to((weapon as Node2D).get_global_mouse_position()) < 0.001, "weapon fallback restored")
 
+	var leftover := root.find_children("Grenade", "RigidBody2D", true, false)
+	for n in leftover:
+		(n as Node).queue_free()
+	await process_frame
+	await wait_physics(1)
+	check(root.find_children("Grenade", "RigidBody2D", true, false).is_empty(), "aim throw leaves no shells")
+
 	Input.action_release("fire")
