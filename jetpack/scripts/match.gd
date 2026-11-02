@@ -5,6 +5,7 @@ extends Node2D
 ## No scoring.
 
 var _spawner: Spawner
+var _manager: MatchManager
 # HUD-readable hook state: latest soldier HP seen via health_changed.
 # Sentinel -1.0 means "no event yet".
 var last_hp := -1.0
@@ -23,6 +24,11 @@ signal soldier_respawned
 func _ready() -> void:
 	_spawner = Spawner.new()
 	add_child(_spawner)
+	_manager = get_node_or_null("MatchManager") as MatchManager
+	if _manager == null:
+		_manager = MatchManager.new()
+		_manager.name = "MatchManager"
+		add_child(_manager)
 	var points := _spawner.spawn_points()
 	var idx := Spawner.choose_spawn(points, [])
 	if idx >= 0 and idx < points.size():
@@ -46,6 +52,8 @@ func _on_soldier_health_changed(hp: float, max_hp: float) -> void:
 
 
 func _on_soldier_died() -> void:
+	if is_instance_valid(_manager):
+		_manager.record_death("soldier_0")
 	death_count += 1
 	last_death_cause = str(_soldier.get("last_death_cause"))
 	soldier_died.emit()
