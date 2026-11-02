@@ -352,9 +352,9 @@ func _set_crouched(on: bool) -> void:
 		_visual.scale.y = h / _stand_h
 
 
-func _load_config() -> void:
+func _load_config(movement_path: String = CONFIG_PATH, grenade_path: String = GRENADE_CONFIG_PATH) -> void:
 	var cfg := ConfigFile.new()
-	if cfg.load(CONFIG_PATH) != OK:
+	if cfg.load(movement_path) != OK:
 		push_warning("soldier: missing %s, using export defaults" % CONFIG_PATH)
 		return
 	run_speed = _cfg_float(cfg, "movement", "run_speed", run_speed)
@@ -373,7 +373,7 @@ func _load_config() -> void:
 	air_refuel_mult = _cfg_float(cfg, "movement", "air_refuel_mult", air_refuel_mult)
 
 	var gcfg := ConfigFile.new()
-	if gcfg.load(GRENADE_CONFIG_PATH) != OK:
+	if gcfg.load(grenade_path) != OK:
 		push_warning("soldier: missing %s, using export defaults" % GRENADE_CONFIG_PATH)
 		return
 	throw_speed = _cfg_float(gcfg, "grenade", "throw_speed", throw_speed)
