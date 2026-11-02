@@ -69,6 +69,10 @@ func apply_to(body: Node) -> bool:
 		"grenade":
 			if not body.has_method("add_grenades"):
 				return false
+			var cur_nades = body.get("grenade_count")
+			var cur_max = body.get("grenade_max")
+			if cur_nades != null and cur_max != null and int(cur_nades) >= int(cur_max):
+				return false
 			body.call("add_grenades", 99)
 			print("PICKUP grenades restocked")
 		_:
