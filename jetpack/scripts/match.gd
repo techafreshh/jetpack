@@ -42,6 +42,9 @@ func _ready() -> void:
 		_soldier.connect("died", _on_soldier_died)
 	if not _soldier.is_connected("respawned", _on_soldier_respawned):
 		_soldier.connect("respawned", _on_soldier_respawned)
+	var hud := get_node_or_null("hud")
+	if hud != null and hud.has_method("bind_soldier"):
+		hud.call("bind_soldier", _soldier)
 	print("MATCH READY")
 
 
