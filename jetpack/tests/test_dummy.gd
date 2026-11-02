@@ -7,6 +7,19 @@ extends SceneTree
 
 const EXPLOSION_SCRIPT := preload("res://scripts/fx/explosion.gd")
 
+# Recording double for the race backup: take_damage fires even when flagged
+# dead, unlike a real dummy whose own guard early-returns on is_dead and
+# whose body takes no knockback. A zero call count therefore proves detonate
+# itself skipped the node via the Health.is_dead guard.
+class RaceProbe extends Node2D:
+	var is_dead := false
+	var hp := 100.0
+	var velocity := Vector2.ZERO
+	var take_damage_calls := 0
+	func take_damage(amount: float) -> void:
+		take_damage_calls += 1
+		hp -= amount
+
 var passed := 0
 var failed := 0
 
@@ -144,32 +157,43 @@ func run_tests() -> void:
 	check(float(far_dummy.get("hp")) == far_hp0, "out-of-radius blast spares dummy (hp=%f)" % float(far_dummy.get("hp")))
 	boom2.queue_free()
 
-	# Race backup: an externally-flagged-but-grouped dummy is skipped by the
-	# Health.is_dead guard even though group-leave never ran.
-	var race_dummy := dummy_packed.instantiate() as StaticBody2D
-	root.add_child(race_dummy)
+	# Race backup: detonate itself must skip an externally-flagged-but-grouped
+	# node even though group-leave never ran. The recording double stands in
+	# for the race; the live control in the same blast proves the blast reached
+	# the centre.
+	var race_probe := RaceProbe.new()
+	race_probe.set("is_dead", true)
+	root.add_child(race_probe)
+	var race_live := RaceProbe.new()
+	race_live.set("is_dead", false)
+	root.add_child(race_live)
 	await process_frame
 	await process_frame
-	race_dummy.global_position = blast_centre
-	var race_died := [0]
-	race_dummy.connect("died", func() -> void: race_died[0] += 1)
-	race_dummy.set("is_dead", true)
-	var race_hp0 := float(race_dummy.get("hp"))
-	var race_pos0: Vector2 = race_dummy.global_position
-	check_close(race_hp0, float(race_dummy.get("max_hp")), 0.001, "race dummy keeps full HP when flagged")
-	check(race_dummy.is_in_group("damageable"), "flagged dummy still grouped before race blast")
-	check(Health.is_dead(race_dummy), "externally-flagged dummy reads dead")
+	race_probe.global_position = blast_centre
+	race_live.global_position = blast_centre
+	race_probe.add_to_group("damageable")
+	race_live.add_to_group("damageable")
+	var race_hp0 := float(race_probe.get("hp"))
+	check_close(race_hp0, 100.0, 0.001, "race probe keeps full HP when flagged")
+	check(race_probe.is_in_group("damageable"), "flagged probe still grouped before race blast")
+	check(race_live.is_in_group("damageable"), "live control grouped before race blast")
+	check(Health.is_dead(race_probe), "externally-flagged probe reads dead")
+	check(not Health.is_dead(race_live), "live control reads not dead")
 	var boom3 := EXPLOSION_SCRIPT.new() as Node2D
 	root.add_child(boom3)
 	boom3.global_position = blast_centre
+	var race_max: float = boom3.get("max_damage")
 	boom3.call("detonate")
-	check_close(float(race_dummy.get("hp")), race_hp0, 0.001, "flagged-but-grouped blast deals no damage")
-	check((race_dummy.global_position as Vector2).distance_to(race_pos0) < 1.0, "flagged-but-grouped blast applies no drift")
-	check(race_died[0] == 0, "flagged-but-grouped blast emits no died")
-	check(race_dummy.is_in_group("damageable"), "flagged dummy still grouped after race blast")
+	check(int(race_probe.get("take_damage_calls")) == 0, "flagged-but-grouped blast never calls take_damage")
+	check_close(float(race_probe.get("hp")), race_hp0, 0.001, "flagged-but-grouped blast deals no damage")
+	check((race_probe.get("velocity") as Vector2).is_equal_approx(Vector2.ZERO), "flagged-but-grouped blast applies no knockback")
+	check(race_probe.is_in_group("damageable"), "flagged probe still grouped after race blast")
+	check(int(race_live.get("take_damage_calls")) == 1, "same blast hits the live control once")
+	check_close(float(race_live.get("hp")), 100.0 - race_max, 0.001, "live control takes full centre damage")
+	check((race_live.get("velocity") as Vector2).length() > 1.0, "live control takes knockback")
 	boom3.queue_free()
-	race_dummy.set("is_dead", false)
-	race_dummy.queue_free()
+	race_probe.queue_free()
+	race_live.queue_free()
 
 	# Tracer volume: hold fire 66 physics ticks for >=10 genuine
 	# weapon-child Line2D tracers (soldier ArcPreview excluded). A 0.1 s
