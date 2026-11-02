@@ -112,8 +112,9 @@ func run_tests() -> void:
 	check(int(weapon.get("ammo")) >= 10, "ranger equip fills mag for volume probe")
 	weapon.call("set_aim_point", (weapon as Node2D).global_position + Vector2(300, 0))
 	Input.action_press("fire")
-	# 66 ticks (~1.1 s at 10 rps): the dummy volume probe holds 60 ticks but
-	# counts root-wide, padding its >=10 with the soldier ArcPreview Line2D.
+	# 66 ticks (~1.1 s at 10 rps): the dummy volume probe holds 60 ticks and
+	# counts weapon children, so its >=10 is genuine tracers with the soldier
+	# ArcPreview Line2D excluded (the old root-wide idiom padded it by one).
 	# Weapon-children-only counting excludes that padding, so hold slightly
 	# longer to leave >=10 genuine tracers; none expire (1.5 s lifetime).
 	await wait_physics(66)
