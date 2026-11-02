@@ -69,10 +69,15 @@ signal respawned
 var fuel: float = 100.0
 var crouched: bool = false
 var thrusting: bool = false
-# Script-level aim override for headless tests: raw Input.warp_mouse is a
-# display-server no-op with no cursor headlessly, so steer aim via this seam.
+# Script-level aim override for headless tests: the display server has no
+# cursor headlessly, so steer aim via this seam.
 var aim_override := Vector2.ZERO
 var has_aim_override := false
+## Per-tick driver: the sole reader of raw input (HumanPilot) or a scripted
+## Pilot subclass. The sim consumes only Pilot.Command, never devices.
+var pilot: Pilot
+var _cmd_aim := Vector2.ZERO
+var _has_cmd_aim := false
 
 var _stand_h: float = 64.0
 var _saved_layer := 1
@@ -97,7 +102,11 @@ func _ready() -> void:
 		if rect != null:
 			_stand_h = rect.size.y
 	fuel = fuel_max
-	_ensure_input_actions()
+	if pilot == null:
+		pilot = HumanPilot.new()
+		add_child(pilot)
+	elif pilot.get_parent() == null:
+		add_child(pilot)
 	_record_safe_position()
 
 
@@ -117,10 +126,27 @@ func _physics_process(delta: float) -> void:
 	if global_position.y > KILL_Y:
 		_die("fall")
 		return
+	var cmd := Pilot.Command.new()
+	if pilot != null and is_instance_valid(pilot):
+		cmd = pilot.get_command(delta)
+	apply_command(cmd, delta)
+
+
+func set_pilot(p: Pilot) -> void:
+	if p == pilot:
+		return
+	if pilot != null and is_instance_valid(pilot):
+		pilot.queue_free()
+	pilot = p
+	if pilot != null and pilot.get_parent() == null:
+		add_child(pilot)
+
+
+func apply_command(cmd: Pilot.Command, delta: float) -> void:
 	var was_floor := is_on_floor()
 
 	# Crouch first so height and speed mult apply to the rest of the tick.
-	if Input.is_action_pressed("crouch"):
+	if cmd.crouch:
 		_set_crouched(true)
 	else:
 		if _head_check == null:
@@ -130,7 +156,7 @@ func _physics_process(delta: float) -> void:
 			if not _head_check.is_colliding():
 				_set_crouched(false)
 
-	thrusting = Input.is_action_pressed("fly") and fuel > 0.0
+	thrusting = cmd.fly and fuel > 0.0
 
 	var burn_rate := fuel_max / fuel_burn_s
 	if not was_floor:
@@ -142,7 +168,7 @@ func _physics_process(delta: float) -> void:
 		var mult := ground_refuel_mult if was_floor else air_refuel_mult
 		fuel = minf(fuel_max, fuel + burn_rate * mult * delta)
 
-	var dir := Input.get_axis("move_left", "move_right")
+	var dir := clampf(cmd.move_x, -1.0, 1.0)
 	var target := dir * run_speed * (crouch_speed_mult if crouched else 1.0)
 	if dir != 0.0:
 		var accel := ground_accel if was_floor else ground_accel * air_control
@@ -151,11 +177,28 @@ func _physics_process(delta: float) -> void:
 		velocity.x = move_toward(velocity.x, 0.0, ground_friction * delta)
 	# Airborne with no input: velocity.x untouched, momentum preserved.
 
-	if Input.is_action_just_pressed("throw_grenade"):
+	if cmd.grenade:
 		throw_grenade()
+	_cmd_aim = cmd.aim_point
+	_has_cmd_aim = true
+	var weapon := get_node_or_null("Weapon")
+	if weapon != null:
+		weapon.call("set_aim_point", _aim_point())
+		if cmd.fire and weapon.has_method("try_fire"):
+			weapon.call("try_fire")
+		if cmd.reload and weapon.has_method("reload"):
+			weapon.call("reload")
+	if cmd.switch_to >= 0:
+		_switch_to(cmd.switch_to)
 	_update_arc_preview()
 
 	move_and_slide()
+
+
+func _switch_to(idx: int) -> void:
+	if idx < 0 or idx >= slots.size():
+		return
+	add_weapon(slots[idx])
 
 
 func take_damage(amount: float) -> void:
@@ -316,6 +359,8 @@ func clear_aim_override() -> void:
 func _aim_point() -> Vector2:
 	if has_aim_override:
 		return aim_override
+	if _has_cmd_aim:
+		return _cmd_aim
 	return get_global_mouse_position()
 
 
@@ -422,25 +467,3 @@ func _load_spawn_config(path: String = SPAWN_CONFIG_PATH) -> void:
 		if raw is Vector2 and raw != Vector2.INF:
 			_spawn_points.append(raw)
 
-
-func _ensure_input_actions() -> void:
-	var keys := {
-		"move_left": [KEY_A, KEY_LEFT],
-		"move_right": [KEY_D, KEY_RIGHT],
-		"crouch": [KEY_S, KEY_DOWN],
-		"fly": [KEY_SPACE, KEY_W, KEY_UP],
-		"throw_grenade": [KEY_G],
-	}
-	for action in keys:
-		if not InputMap.has_action(action):
-			InputMap.add_action(action)
-		for keycode in keys[action]:
-			var exists := false
-			for ev in InputMap.action_get_events(action):
-				if ev is InputEventKey and (ev as InputEventKey).physical_keycode == keycode:
-					exists = true
-					break
-			if not exists:
-				var press := InputEventKey.new()
-				press.physical_keycode = keycode
-				InputMap.action_add_event(action, press)
