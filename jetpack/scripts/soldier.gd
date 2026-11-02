@@ -259,17 +259,20 @@ func add_weapon(id: String) -> bool:
 	return true
 
 
-func restock_ammo() -> void:
+func restock_ammo() -> bool:
 	if not is_alive:
-		return
+		return false
 	var weapon := get_node_or_null("Weapon")
 	if weapon == null:
-		return
+		return false
 	var stats = weapon.get("stats")
 	if stats == null:
-		return
+		return false
+	if int(weapon.get("ammo")) >= int(stats.get("mag_size")) and int(weapon.get("reserve_left")) >= int(stats.get("reserve")):
+		return false
 	weapon.set("ammo", int(stats.get("mag_size")))
 	weapon.set("reserve_left", int(stats.get("reserve")))
+	return true
 
 
 func throw_grenade() -> bool:

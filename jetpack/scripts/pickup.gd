@@ -63,7 +63,8 @@ func apply_to(body: Node) -> bool:
 		"ammo":
 			if not body.has_method("restock_ammo"):
 				return false
-			body.call("restock_ammo")
+			if not bool(body.call("restock_ammo")):
+				return false
 			print("PICKUP ammo restocked")
 		"grenade":
 			if not body.has_method("add_grenades"):
