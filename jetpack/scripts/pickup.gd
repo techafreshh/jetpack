@@ -186,8 +186,21 @@ func _load_config() -> void:
 	# Config supplies defaults; an explicitly set export always wins so
 	# placed instances (and headless probes) can tune one pad in isolation.
 	if is_equal_approx(respawn_s, 15.0):
-		respawn_s = float(cfg.get_value(section, "respawn_s", respawn_s))
+		respawn_s = _cfg_float(cfg, section, "respawn_s", respawn_s)
 	if is_equal_approx(heal_amount, 30.0):
-		heal_amount = float(cfg.get_value("health", "heal_amount", heal_amount))
+		heal_amount = _cfg_float(cfg, "health", "heal_amount", heal_amount)
 	if weapon_id == "scatter":
 		weapon_id = String(cfg.get_value("weapon", "weapon_id", weapon_id))
+
+
+static func _cfg_float(cfg: ConfigFile, section: String, key: String, fallback: float) -> float:
+	var raw: Variant = cfg.get_value(section, key, fallback)
+	if raw is float:
+		if is_finite(raw):
+			return raw
+		push_warning("pickup: invalid %s/%s, keeping default" % [section, key])
+		return fallback
+	if raw is int:
+		return float(raw)
+	push_warning("pickup: invalid %s/%s, keeping default" % [section, key])
+	return fallback
