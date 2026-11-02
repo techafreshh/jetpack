@@ -231,6 +231,16 @@ func _finish(winner: String) -> void:
 	state_changed.emit(match_state)
 	match_ended.emit(winner_id)
 	print("MATCH ENDED winner=%s" % winner_id)
+	_push_run_state()
+
+
+func _push_run_state() -> void:
+	var tree := get_tree()
+	if tree == null or tree.root == null:
+		return
+	var state := tree.root.get_node_or_null("RunState")
+	if state != null and state.has_method("record_match"):
+		state.call("record_match", get_match_results())
 
 
 func _on_seated_died(participant_id: String) -> void:

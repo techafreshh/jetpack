@@ -15,6 +15,12 @@ config/description="2D jetpack arena shooter (Godot 4.7, web-first)."
 run/main_scene="res://scenes/boot.tscn"
 config/features=PackedStringArray("4.7", "GL Compatibility")
 
+[autoload]
+
+Settings="*res://scripts/settings.gd"
+Audio="*res://scripts/audio.gd"
+RunState="*res://scripts/run_state.gd"
+
 [display]
 
 window/size/viewport_width=1280

@@ -52,6 +52,10 @@ func _ensure_input_actions() -> void:
 		"slot_8": [KEY_8],
 	}
 	for action in keys:
+		# Leave Settings-applied remaps alone: only backfill compiled
+		# defaults for actions that currently have zero events.
+		if InputMap.has_action(action) and not InputMap.action_get_events(action).is_empty():
+			continue
 		if not InputMap.has_action(action):
 			InputMap.add_action(action)
 		for keycode in keys[action]:
