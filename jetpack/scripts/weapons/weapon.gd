@@ -104,9 +104,9 @@ func get_zoom() -> float:
 
 
 func _physics_process(delta: float) -> void:
-	_cooldown -= delta
 	if stats == null:
 		return
+	_cooldown = maxf(0.0, _cooldown - delta)
 	if Input.is_action_pressed("fire") and can_fire():
 		if consume_shot():
 			_fire()
