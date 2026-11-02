@@ -49,6 +49,9 @@ var last_death_cause := ""
 const SAFE_FALLBACK := Vector2(200, 300)
 ## Most recent above-plane position; spawner-less respawn prefers it.
 var _last_safe_position := Vector2.INF
+## Cached spawn config loaded once in _ready: per-death disk reads removed.
+var _spawn_delay_ticks: int = Health.RESPAWN_TICKS
+var _spawn_points: Array[Vector2] = []
 var slots: Array[String] = ["ranger_ar"]
 
 signal died
@@ -75,6 +78,7 @@ var _saved_mask := 1
 
 func _ready() -> void:
 	_load_config()
+	_load_spawn_config()
 	add_to_group("damageable")
 	_saved_layer = collision_layer
 	_saved_mask = collision_mask
@@ -220,20 +224,13 @@ func _respawn() -> void:
 
 
 func _respawn_delay_ticks() -> int:
-	var cfg := ConfigFile.new()
-	if cfg.load(SPAWN_CONFIG_PATH) != OK:
-		return Health.RESPAWN_TICKS
-	return int(cfg.get_value("respawn", "delay_ticks", Health.RESPAWN_TICKS))
+	return _spawn_delay_ticks
 
 
 func _config_respawn_point() -> Vector2:
-	var cfg := ConfigFile.new()
-	if cfg.load(SPAWN_CONFIG_PATH) != OK:
-		return SAFE_FALLBACK
-	for i in 8:
-		var v: Vector2 = cfg.get_value("spawn%d" % i, "pos", Vector2.INF)
-		if v != Vector2.INF and v.y < KILL_Y:
-			return v
+	for p in _spawn_points:
+		if p != Vector2.INF and p.y < KILL_Y:
+			return p
 	return SAFE_FALLBACK
 
 
@@ -365,6 +362,19 @@ func _load_config() -> void:
 	throw_speed = float(gcfg.get_value("grenade", "throw_speed", throw_speed))
 	grenade_max = int(gcfg.get_value("grenade", "max_grenades", grenade_max))
 	grenade_count = mini(grenade_count, grenade_max)
+
+
+func _load_spawn_config() -> void:
+	var cfg := ConfigFile.new()
+	if cfg.load(SPAWN_CONFIG_PATH) != OK:
+		push_warning("soldier: missing %s, using export defaults" % SPAWN_CONFIG_PATH)
+		return
+	_spawn_delay_ticks = int(cfg.get_value("respawn", "delay_ticks", Health.RESPAWN_TICKS))
+	_spawn_points.clear()
+	for i in 8:
+		var v: Vector2 = cfg.get_value("spawn%d" % i, "pos", Vector2.INF)
+		if v != Vector2.INF:
+			_spawn_points.append(v)
 
 
 func _ensure_input_actions() -> void:
