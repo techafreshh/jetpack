@@ -165,6 +165,22 @@ func run_tests() -> void:
 		check(bool(cd.call("consume_shot")), "consume_shot succeeds after cooldown reset")
 		cd.call("equip", ranger)
 		check(bool(cd.call("can_fire")), "equip clears the gate")
+		# Reload clears the gate: a mid-cooldown refill re-opens fire,
+		# while no-op reloads leave a preset gate untouched.
+		check(bool(cd.call("consume_shot")), "reload-gate setup shot succeeds")
+		check(float(cd.get("_cooldown")) > 0.0, "setup shot arms the gate")
+		check(not bool(cd.call("can_fire")), "can_fire false before mid-cooldown reload")
+		check(bool(cd.call("reload")), "mid-cooldown reload succeeds")
+		check_close(float(cd.get("_cooldown")), 0.0, 0.0001, "reload clears the gate")
+		check(bool(cd.call("can_fire")), "refilled mag can_fire after reload")
+		cd.set("_cooldown", 0.5)
+		check(not bool(cd.call("reload")), "reload fails when mag full")
+		check_close(float(cd.get("_cooldown")), 0.5, 0.0001, "full-mag reload preserves the gate")
+		cd.set("ammo", int(cd.get("ammo")) - 1)
+		cd.set("reserve_left", 0)
+		cd.set("_cooldown", 0.5)
+		check(not bool(cd.call("reload")), "reload fails with empty reserve")
+		check_close(float(cd.get("_cooldown")), 0.5, 0.0001, "empty-reserve reload preserves the gate")
 		cd.free()
 
 	# (c) No per-gun name branches in weapon scripts.

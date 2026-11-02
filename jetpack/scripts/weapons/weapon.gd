@@ -94,6 +94,7 @@ func reload() -> bool:
 	var take: int = mini(need, reserve_left)
 	ammo += take
 	reserve_left -= take
+	_cooldown = 0.0
 	return true
 
 
