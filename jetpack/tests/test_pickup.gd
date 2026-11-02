@@ -266,6 +266,41 @@ func run_tests() -> void:
 	full_nade_pad.queue_free()
 	await process_frame
 
+	# (d4) Corpse walkover on ammo/grenade pads stays armed.
+	var corpse_ammo_pad = await make_pickup("ammo", "scatter", 10.0)
+	check(corpse_ammo_pad != null, "corpse ammo pad instantiates")
+	var corpse_nade_pad = await make_pickup("grenade", "scatter", 10.0)
+	check(corpse_nade_pad != null, "corpse grenade pad instantiates")
+	soldier.set("hp", float(soldier.get("max_hp")))
+	soldier.set("is_alive", true)
+	soldier.call("take_damage", 200.0)
+	check(not bool(soldier.get("is_alive")), "corpse pad setup is_alive is false")
+	check(not bool(corpse_ammo_pad.call("apply_to", soldier)), "corpse ammo apply_to returns false")
+	check(not bool(corpse_ammo_pad.get("disabled")), "corpse ammo pad stays enabled")
+	check_close(float(corpse_ammo_pad.get("time_left")), 0.0, 0.01, "corpse ammo pad sets no timer")
+	var corpse_ammo_label = corpse_ammo_pad.get_node_or_null("TimerLabel")
+	check(corpse_ammo_label != null and String(corpse_ammo_label.get("text")) == "", "corpse ammo pad shows no timer label")
+	check(not bool(corpse_nade_pad.call("apply_to", soldier)), "corpse grenade apply_to returns false")
+	check(not bool(corpse_nade_pad.get("disabled")), "corpse grenade pad stays enabled")
+	check_close(float(corpse_nade_pad.get("time_left")), 0.0, 0.01, "corpse grenade pad sets no timer")
+	var corpse_nade_label = corpse_nade_pad.get_node_or_null("TimerLabel")
+	check(corpse_nade_label != null and String(corpse_nade_label.get("text")) == "", "corpse grenade pad shows no timer label")
+	# Same pads still consume for a live soldier with partial stock.
+	soldier.set("is_alive", true)
+	soldier.set("hp", 50.0)
+	var corpse_weapon = soldier.get_node_or_null("Weapon")
+	if corpse_weapon != null:
+		corpse_weapon.set("ammo", 0)
+	soldier.set("grenade_count", 0)
+	check(bool(corpse_ammo_pad.call("apply_to", soldier)), "live apply_to on corpse ammo pad returns true")
+	check(bool(corpse_ammo_pad.get("disabled")), "corpse ammo pad enters disabled state")
+	check(bool(corpse_nade_pad.call("apply_to", soldier)), "live apply_to on corpse grenade pad returns true")
+	check(int(soldier.get("grenade_count")) == int(soldier.get("grenade_max")), "corpse grenade pad restores max once live")
+	check(bool(corpse_nade_pad.get("disabled")), "corpse grenade pad enters disabled state")
+	corpse_ammo_pad.queue_free()
+	corpse_nade_pad.queue_free()
+	await process_frame
+
 	# (e) Short-timer pad re-enables after expiry and clears the label.
 	var quick = await make_pickup("health", "scatter", 0.3)
 	soldier.set("hp", 50.0)

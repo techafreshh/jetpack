@@ -63,11 +63,23 @@ func apply_to(body: Node) -> bool:
 		"ammo":
 			if not body.has_method("restock_ammo"):
 				return false
+			if not Health.is_host_alive(body):
+				return false
+			var pad_weapon := body.get_node_or_null("Weapon")
+			if pad_weapon != null:
+				var pad_stats = pad_weapon.get("stats")
+				if pad_stats != null:
+					var pad_ammo = pad_weapon.get("ammo")
+					var pad_reserve = pad_weapon.get("reserve_left")
+					if pad_ammo != null and pad_reserve != null and int(pad_ammo) >= int(pad_stats.get("mag_size")) and int(pad_reserve) >= int(pad_stats.get("reserve")):
+						return false
 			if not bool(body.call("restock_ammo")):
 				return false
 			print("PICKUP ammo restocked")
 		"grenade":
 			if not body.has_method("add_grenades"):
+				return false
+			if not Health.is_host_alive(body):
 				return false
 			var cur_nades = body.get("grenade_count")
 			var cur_max = body.get("grenade_max")
