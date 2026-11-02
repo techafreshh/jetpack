@@ -1,7 +1,7 @@
 extends SceneTree
 ## Headless regression for spawner foe selection: live dummies never count
 ## as foes in Spawner.live_enemy_positions, while live soldiers still repel
-## respawns via Spawner.choose_spawn. Dummies stay in the damageable group.
+## respawns via Spawner.choose_spawn. Dead dummies leave the damageable group.
 ## Run: godot --headless --path jetpack --script res://tests/test_spawner_foes.gd
 
 var passed := 0
@@ -94,7 +94,7 @@ func run_tests() -> void:
 	# (d) Killing the dummy changes nothing: it never counted, alive or dead.
 	dummy.call("take_damage", 200.0)
 	check(bool(dummy.get("is_dead")), "lethal damage kills dummy")
-	check(dummy.is_in_group("damageable"), "dead dummy stays in damageable group")
+	check(not dummy.is_in_group("damageable"), "dead dummy leaves damageable group")
 	foes = spawner.live_enemy_positions()
 	check(foes.is_empty(), "dead dummy yields no foes (got %d)" % foes.size())
 	check(Spawner.choose_spawn(pts, foes) == 0, "dead dummy picks index 0")
