@@ -46,6 +46,8 @@ func apply_to(body: Node) -> bool:
 		"health":
 			if not body.has_method("heal"):
 				return false
+			if not Health.is_host_alive(body):
+				return false
 			var cur_hp = body.get("hp")
 			var cur_max = body.get("max_hp")
 			if cur_hp != null and cur_max != null and float(cur_hp) >= float(cur_max):

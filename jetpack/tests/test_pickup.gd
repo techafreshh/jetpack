@@ -132,6 +132,31 @@ func run_tests() -> void:
 	full_pad.queue_free()
 	await process_frame
 
+	# (b3) Corpse walkover is ignored and the pad stays armed.
+	var corpse_pad = await make_pickup("health", "scatter", 15.0)
+	check(corpse_pad != null, "corpse pad instantiates")
+	soldier.set("hp", float(soldier.get("max_hp")))
+	soldier.set("is_alive", true)
+	soldier.call("take_damage", 200.0)
+	check_close(float(soldier.get("hp")), 0.0, 0.01, "corpse setup HP is 0")
+	check(not bool(soldier.get("is_alive")), "corpse setup is_alive is false")
+	check(not bool(corpse_pad.call("apply_to", soldier)), "corpse apply_to returns false")
+	check(not bool(corpse_pad.get("disabled")), "corpse pad stays enabled")
+	check_close(float(corpse_pad.get("time_left")), 0.0, 0.01, "corpse pad sets no timer")
+	var corpse_label = corpse_pad.get_node_or_null("TimerLabel")
+	check(corpse_label != null and String(corpse_label.get("text")) == "", "corpse pad shows no timer label")
+	check_close(float(soldier.get("hp")), 0.0, 0.01, "corpse walkover leaves HP unchanged")
+	# Same pad still heals the next live hurt soldier with no respawn wait.
+	soldier.set("is_alive", true)
+	soldier.set("hp", 50.0)
+	check(bool(corpse_pad.call("apply_to", soldier)), "hurt apply_to on corpse pad returns true")
+	check(float(soldier.get("hp")) >= 75.0, "corpse pad heals once hurt (got %f)" % float(soldier.get("hp")))
+	check(bool(corpse_pad.get("disabled")), "corpse pad enters disabled state")
+	var corpse_label2 = corpse_pad.get_node_or_null("TimerLabel")
+	check(corpse_label2 != null and String(corpse_label2.get("text")) != "", "consumed corpse pad shows timer label")
+	corpse_pad.queue_free()
+	await process_frame
+
 	# (c) Weapon crate grants scatter and respawns within 20 s.
 	var crate = await make_pickup("weapon", "scatter", 12.0)
 	check(crate != null, "weapon crate instantiates")
