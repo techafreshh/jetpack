@@ -7,3 +7,5 @@ __pycache__/
 # *.uid, ignore only .godot/) so fresh clones and CI share stable UIDs.
 # Do NOT add *.uid to this file. When adding a new script, `git add` its
 # .uid sidecar alongside the .gd file.
+# CI and local Godot runs write import.log / uid-status.log; keep them untracked.
+*.log
