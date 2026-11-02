@@ -150,18 +150,24 @@ func _fire() -> void:
 
 
 func _fire_ray(from: Vector2, dir: Vector2) -> void:
+	if stats == null:
+		return
 	var end := from + dir * stats.range
-	var space := get_world_2d().direct_space_state
-	var query := PhysicsRayQueryParameters2D.create(from, end)
-	var parent := get_parent()
-	if parent is CollisionObject2D:
-		query.exclude = [(parent as CollisionObject2D).get_rid()]
-	var hit := space.intersect_ray(query)
-	if not hit.is_empty():
-		end = hit["position"]
-		var collider := hit.get("collider") as Object
-		if collider != null and collider.has_method("take_damage"):
-			collider.call("take_damage", stats.damage)
+	if is_inside_tree():
+		var world := get_world_2d()
+		if world != null:
+			var space := world.direct_space_state
+			if space != null:
+				var query := PhysicsRayQueryParameters2D.create(from, end)
+				var parent := get_parent()
+				if parent is CollisionObject2D:
+					query.exclude = [(parent as CollisionObject2D).get_rid()]
+				var hit := space.intersect_ray(query)
+				if not hit.is_empty():
+					end = hit["position"]
+					var collider := hit.get("collider") as Object
+					if collider != null and collider.has_method("take_damage"):
+						collider.call("take_damage", stats.damage)
 	_spawn_tracer(from, end)
 
 
@@ -184,10 +190,13 @@ func _spawn_tracer(a: Vector2, b: Vector2) -> void:
 	tracer.global_position = Vector2.ZERO
 	tracer.add_point(a)
 	tracer.add_point(b)
-	var tween := tracer.create_tween()
-	tween.set_process_mode(Tween.TWEEN_PROCESS_PHYSICS)
-	tween.tween_property(tracer, "modulate:a", 0.0, tracer_lifetime)
-	tween.tween_callback(tracer.queue_free)
+	var tween: Tween = null
+	if is_inside_tree():
+		tween = tracer.create_tween()
+	if tween != null:
+		tween.set_process_mode(Tween.TWEEN_PROCESS_PHYSICS)
+		tween.tween_property(tracer, "modulate:a", 0.0, tracer_lifetime)
+		tween.tween_callback(tracer.queue_free)
 	_tracers.append(tracer)
 
 

@@ -130,3 +130,36 @@ func run_tests() -> void:
 	soldier.queue_free()
 	await process_frame
 	Input.action_release("fire")
+
+	# Tree-less proof: _fire_ray with no world degrades to a full-range
+	# miss with a visible tracer instead of erroring on get_world_2d().
+	var off = scr.new()
+	check(off != null, "tree-less weapon instantiates")
+	if off != null:
+		off.call("equip", ranger)
+		check(not off.is_inside_tree(), "tree-less weapon stays off-tree")
+		off.call("_fire_ray", Vector2.ZERO, Vector2.RIGHT)
+		var off_live := live_tracers_of(off)
+		check(off_live.size() == 1, "tree-less _fire_ray leaves one tracer (got %d)" % off_live.size())
+		var off_ledger: Array = off.get("_tracers")
+		check(off_ledger.size() == 1, "tree-less _fire_ray tracks one ledger entry (got %d)" % off_ledger.size())
+		if off_live.size() == 1:
+			var span: float = ((off_live[0] as Line2D).get_point_position(1) - (off_live[0] as Line2D).get_point_position(0)).length()
+			check(absf(span - float(ranger.get("range"))) <= 1.0, "tree-less _fire_ray spans full range (got %f)" % span)
+		# Off-tree cap ledger still evicts oldest-first.
+		off.set("max_tracers", 4)
+		for i in 10:
+			off.call("_fire_ray", Vector2.ZERO, Vector2.RIGHT)
+		await process_frame
+		check(live_tracers_of(off).size() <= 4, "off-tree overflow never exceeds cap (got %d)" % live_tracers_of(off).size())
+		check((off.get("_tracers") as Array).size() == 4, "off-tree ledger holds exactly cap entries (got %d)" % (off.get("_tracers") as Array).size())
+		off.free()
+
+	# Null-stats guard: a bare weapon's _fire_ray is a silent no-op.
+	var bare = scr.new()
+	check(bare != null, "bare weapon instantiates")
+	if bare != null:
+		bare.call("_fire_ray", Vector2.ZERO, Vector2.RIGHT)
+		check(live_tracers_of(bare).size() == 0, "null-stats _fire_ray spawns no tracer")
+		check((bare.get("_tracers") as Array).size() == 0, "null-stats _fire_ray tracks no ledger entry")
+		bare.free()
