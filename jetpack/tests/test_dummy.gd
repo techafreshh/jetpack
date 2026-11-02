@@ -63,6 +63,12 @@ func run_tests() -> void:
 	check(bool(dummy.get("is_dead")), "post-death take_damage keeps is_dead")
 	check(died_count[0] == 1, "post-death take_damage emits no second died")
 	check(float(dummy.get("hp")) <= 0.0, "post-death hp stays <= 0")
+	check(int(dummy.get("collision_layer")) == 0, "corpse collision_layer zeroed on death")
+	check(int(dummy.get("collision_mask")) == 0, "corpse collision_mask zeroed on death")
+	check_close(float(dummy.get("corpse_lifetime")), 3.0, 0.001, "corpse_lifetime defaults to 3.0")
+	check(float(dummy.get("corpse_age")) == 0.0, "corpse timer armed at 0 on death")
+	await process_frame
+	check(is_instance_valid(dummy) and not dummy.is_queued_for_deletion(), "corpse still valid the frame after death")
 
 	# Flash contract: a fresh hit whitens the visual and arms flash_t.
 	var flash_dummy := dummy_packed.instantiate() as StaticBody2D
@@ -130,3 +136,30 @@ func run_tests() -> void:
 	var tracers := root.find_children("*", "Line2D", true, false)
 	check(tracers.size() >= 10, "1 s hold leaves >=10 live tracers (got %d)" % tracers.size())
 	Input.action_release("fire")
+
+	# Corpse expiry: a short-lifetime corpse frees itself, died still once.
+	var corpse_dummy := dummy_packed.instantiate() as StaticBody2D
+	root.add_child(corpse_dummy)
+	await process_frame
+	await process_frame
+	corpse_dummy.set("corpse_lifetime", 0.4)
+	var corpse_died := [0]
+	corpse_dummy.connect("died", func() -> void: corpse_died[0] += 1)
+	for i in 10:
+		corpse_dummy.call("take_damage", 12.0)
+	check(bool(corpse_dummy.get("is_dead")), "short-lifetime dummy is_dead after lethal damage")
+	check(corpse_died[0] == 1, "short-lifetime died emitted once (got %d)" % corpse_died[0])
+	check(int(corpse_dummy.get("collision_layer")) == 0, "short-lifetime corpse collision_layer zeroed")
+	check(int(corpse_dummy.get("collision_mask")) == 0, "short-lifetime corpse collision_mask zeroed")
+	check(is_instance_valid(corpse_dummy), "short-lifetime corpse valid right after death")
+	corpse_dummy.call("take_damage", 12.0)
+	check(corpse_died[0] == 1, "corpse-window take_damage emits no second died")
+	var corpse_tick := -1
+	for i in 90:
+		await physics_frame
+		if not is_instance_valid(corpse_dummy):
+			corpse_tick = i + 1
+			break
+	check(corpse_tick >= 1, "short-lifetime corpse freed after its window (tick=%d)" % corpse_tick)
+	check(not is_instance_valid(corpse_dummy), "corpse gone after lifetime")
+	check(corpse_died[0] == 1, "freed corpse emitted died exactly once (got %d)" % corpse_died[0])

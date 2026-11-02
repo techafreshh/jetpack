@@ -1,10 +1,12 @@
 extends StaticBody2D
 ## Target dummy: measurable shoot target with HP reporting, a white hit flash,
-## and a one-shot death signal. Corpses persist (never freed) so post-death
-## reads and stray rays cannot crash.
+## and a one-shot death signal. On death collisions turn off and the grey
+## corpse stays readable through `corpse_lifetime`, then frees itself.
 
 @export_group("Health")
 @export var max_hp := 100.0
+## How long the grey corpse stays readable after death before freeing.
+@export var corpse_lifetime := 3.0
 
 signal died
 signal health_changed(hp: float, max_hp: float)
@@ -12,6 +14,7 @@ signal health_changed(hp: float, max_hp: float)
 var hp: float = 100.0
 var is_dead := false
 var flash_t := 0.0
+var corpse_age := 0.0
 
 var _base_color := Color(1.0, 0.55, 0.15, 1.0)
 
@@ -26,6 +29,11 @@ func _ready() -> void:
 
 
 func _process(delta: float) -> void:
+	if is_dead:
+		corpse_age += delta
+		if corpse_age >= corpse_lifetime:
+			queue_free()
+			return
 	if flash_t <= 0.0:
 		return
 	flash_t -= delta
@@ -49,6 +57,7 @@ func take_damage(amount: float) -> void:
 		# Let later rays pass through the corpse.
 		collision_layer = 0
 		collision_mask = 0
+		corpse_age = 0.0
 		if visual != null:
 			visual.color = Color(0.45, 0.45, 0.48, 1.0)
 		died.emit()
