@@ -139,6 +139,15 @@ func run_tests() -> void:
 	check(corpse_vel.length() < 0.01, "post-death knockback leaves velocity frozen (drift %f)" % corpse_vel.length())
 	check(died_count[0] == 1, "post-death knockback emits no second died")
 	check(not bool(soldier.get("is_alive")), "post-death knockback keeps is_alive false")
+	# Corpse heal is a silent no-op: hp stays 0, no revive, no signal.
+	var health_count := [0]
+	soldier.connect("health_changed", func(_hp: float, _max_hp: float) -> void: health_count[0] += 1)
+	var corpse_hp := float(soldier.call("heal", 30.0))
+	check_close(corpse_hp, 0.0, 0.0001, "corpse heal returns 0")
+	check_close(float(soldier.get("hp")), 0.0, 0.0001, "corpse heal leaves hp at 0")
+	check(not bool(soldier.get("is_alive")), "corpse heal does not revive")
+	check(died_count[0] == 1, "corpse heal emits no second died")
+	check(health_count[0] == 0, "corpse heal emits no health_changed")
 	var respawn_tick := -1
 	for i in 220:
 		await physics_frame
@@ -154,4 +163,8 @@ func run_tests() -> void:
 	# Soldier fights again after respawn.
 	soldier.call("take_damage", 12.0)
 	check_close(float(soldier.get("hp")), 88.0, 0.0001, "post-respawn damage works (88)")
+	var alive_before: int = health_count[0]
+	var healed := float(soldier.call("heal", 30.0))
+	check_close(healed, 100.0, 0.0001, "post-respawn heal clamps at max_hp")
+	check(health_count[0] == alive_before + 1, "alive heal emits health_changed")
 	soldier.queue_free()
