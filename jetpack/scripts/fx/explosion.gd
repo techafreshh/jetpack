@@ -11,6 +11,9 @@ extends Node2D
 
 var _age := 0.0
 var _detonated := false
+## Tracks whether the Visual already carries the reduced-flash halving so
+## the alpha cut applies exactly once no matter which seam runs first.
+var _softened := false
 
 @onready var _visual: Polygon2D = get_node_or_null("Visual") as Polygon2D
 
@@ -33,8 +36,13 @@ func detonate() -> void:
 	if _detonated:
 		return
 	_detonated = true
+	_apply_flash_softening()
+	_kick_camera()
+	var tree := get_tree()
+	if tree == null:
+		return
 	var center := global_position
-	for node in get_tree().get_nodes_in_group("damageable"):
+	for node in tree.get_nodes_in_group("damageable"):
 		# Normally-killed dummies/soldiers already left damageable, so this
 		# skip is backup for externally-set flags and re-added members.
 		if Health.is_dead(node):
@@ -64,8 +72,36 @@ func detonate() -> void:
 			node.set("velocity", node.get("velocity") + impulse)
 
 
+## Reduced-flash softening: halves the Visual alpha exactly once while the
+## toggle is on. Duck-typed camera kick: feeds trauma to the first seated
+## CameraShake, ignored when none is present (older scenes, bare use).
+func _apply_flash_softening() -> void:
+	if _softened:
+		return
+	if not Accessibility.reduced_flash_on(self):
+		return
+	var visual := _visual if _visual != null else get_node_or_null("Visual") as Polygon2D
+	if visual == null:
+		return
+	var c := visual.color
+	c.a *= 0.5
+	visual.color = c
+	_softened = true
+
+
+func _kick_camera() -> void:
+	var tree := get_tree()
+	if tree == null:
+		return
+	for cam in tree.get_nodes_in_group("camera_shake"):
+		if cam != null and cam.has_method("add_trauma"):
+			cam.call("add_trauma", 0.5)
+		return
+
+
 func _build_visual() -> void:
 	if _visual != null:
+		_apply_flash_softening()
 		return
 	var ring := Polygon2D.new()
 	ring.name = "Visual"
@@ -77,3 +113,4 @@ func _build_visual() -> void:
 	ring.polygon = pts
 	add_child(ring)
 	_visual = ring
+	_apply_flash_softening()

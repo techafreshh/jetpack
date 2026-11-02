@@ -13,6 +13,11 @@ const KILL_Y := 2000.0
 const MAX_GRENADES := 2
 const CHEST_OFFSET := Vector2(0, -32)
 const ARC_STEP := 0.08
+## Aim-assist cone half-angle: only foes within 10 deg of the muzzle ray snap.
+const ASSIST_MAX_ANGLE_DEG := 10.0
+## Aim-assist strength: the snapped point closes half the gap to the foe
+## chest, clearing the 30% acceptance bar with margin.
+const ASSIST_SNAP_FRAC := 0.5
 
 @export_group("Run")
 @export var run_speed := 260.0
@@ -366,11 +371,57 @@ func clear_aim_override() -> void:
 
 
 func _aim_point() -> Vector2:
+	var raw := get_global_mouse_position()
 	if has_aim_override:
-		return aim_override
-	if _has_cmd_aim:
-		return _cmd_aim
-	return get_global_mouse_position()
+		raw = aim_override
+	elif _has_cmd_aim:
+		raw = _cmd_aim
+	return apply_aim_assist(raw)
+
+
+## Aim-assist snap: lerps the raw aim halfway toward the nearest live-foe
+## chest inside the 10 deg muzzle cone. Returns the raw point when assist is
+## off, off-tree, or no foe qualifies, so mouse/override behaviour is
+## untouched by default. Null-safe: skips missing trees and non-Node2D foes.
+func apply_aim_assist(raw_aim: Vector2) -> Vector2:
+	if not Accessibility.aim_assist_on(self):
+		return raw_aim
+	var tree := get_tree()
+	if tree == null:
+		return raw_aim
+	var from := global_position + CHEST_OFFSET
+	var to_raw := raw_aim - from
+	if to_raw.length() < 1.0:
+		return raw_aim
+	var raw_dir := to_raw.normalized()
+	var cos_limit := cos(deg_to_rad(ASSIST_MAX_ANGLE_DEG))
+	var best: Node2D = null
+	var best_dist := INF
+	for foe in tree.get_nodes_in_group("damageable"):
+		if foe == self:
+			continue
+		if not Health.is_live_foe(foe):
+			continue
+		if not (foe is Node2D):
+			continue
+		var chest := (foe as Node2D).global_position
+		if foe is CharacterBody2D:
+			chest += CHEST_OFFSET
+		var to_foe := chest - from
+		var dist := to_foe.length()
+		if dist < 1.0:
+			continue
+		if raw_dir.dot(to_foe.normalized()) < cos_limit:
+			continue
+		if dist < best_dist:
+			best_dist = dist
+			best = foe as Node2D
+	if best == null:
+		return raw_aim
+	var chest := best.global_position
+	if best is CharacterBody2D:
+		chest += CHEST_OFFSET
+	return raw_aim.lerp(chest, ASSIST_SNAP_FRAC)
 
 
 func _aim_direction() -> Vector2:

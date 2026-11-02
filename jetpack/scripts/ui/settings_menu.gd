@@ -32,6 +32,7 @@ func _ready() -> void:
 	_connect_slider("MasterSlider", _on_master_changed)
 	_connect_slider("MusicSlider", _on_music_changed)
 	_connect_slider("SfxSlider", _on_sfx_changed)
+	_connect_slider("ShakeSlider", _on_shake_changed)
 	_connect_toggle("ColorblindToggle", _on_colorblind_toggled)
 	_connect_toggle("FlashToggle", _on_flash_toggled)
 	_connect_toggle("AimAssistToggle", _on_aim_assist_toggled)
@@ -71,11 +72,18 @@ func _refresh_sliders() -> void:
 	_set_slider("MasterSlider", "MasterValue", _volume("master_volume"))
 	_set_slider("MusicSlider", "MusicValue", _volume("music_volume"))
 	_set_slider("SfxSlider", "SfxValue", _volume("sfx_volume"))
+	_set_slider("ShakeSlider", "ShakeValue", _shake())
 
 
 func _volume(key: String) -> float:
 	if _settings != null and _settings.get(key) != null:
 		return clampf(float(_settings.get(key)), 0.0, 1.0)
+	return 1.0
+
+
+func _shake() -> float:
+	if _settings != null and _settings.has_method("get_screen_shake"):
+		return clampf(float(_settings.call("get_screen_shake")), 0.0, 1.0)
 	return 1.0
 
 
@@ -178,6 +186,12 @@ func _on_music_changed(v: float) -> void:
 func _on_sfx_changed(v: float) -> void:
 	if _settings != null and _settings.has_method("set_sfx_volume"):
 		_settings.call("set_sfx_volume", v)
+	_refresh_sliders()
+
+
+func _on_shake_changed(v: float) -> void:
+	if _settings != null and _settings.has_method("set_screen_shake"):
+		_settings.call("set_screen_shake", v)
 	_refresh_sliders()
 
 
