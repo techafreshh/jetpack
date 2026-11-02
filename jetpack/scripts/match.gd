@@ -6,6 +6,9 @@ extends Node2D
 
 var _spawner: Spawner
 var _manager: MatchManager
+## Default arena scene for new matches; the static Greybox child below is the
+## instanced form of this path (kept static for sim determinism).
+@export var arena_path := "res://scenes/arena/main.tscn"
 # HUD-readable hook state: latest soldier HP seen via health_changed.
 # Sentinel -1.0 means "no event yet".
 var last_hp := -1.0

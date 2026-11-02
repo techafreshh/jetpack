@@ -19,6 +19,9 @@ const STATE_RESULTS := "results"
 
 ## Override before adding to the tree to load a different cfg in probes.
 var config_path: String = CONFIG_PATH
+## Default arena scene for new matches; the match scene instances this arena
+## statically (node name Greybox) for sim determinism.
+@export var arena_path := "res://scenes/arena/main.tscn"
 var match_state: String = STATE_COUNTDOWN
 var winner_id: String = ""
 var sudden_death: bool = false
