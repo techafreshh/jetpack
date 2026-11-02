@@ -158,6 +158,19 @@ func run_tests() -> void:
 	check(not bool(soldier.get("is_alive")), "corpse heal does not revive")
 	check(died_count[0] == 1, "corpse heal emits no second died")
 	check(health_count[0] == 0, "corpse heal emits no health_changed")
+	# Corpse add_weapon is a silent no-op: refusal, no slots mutation, no re-equip.
+	var corpse_slots: Array = (soldier.get("slots") as Array).duplicate()
+	var corpse_weapon = soldier.get_node_or_null("Weapon")
+	var corpse_stats = corpse_weapon.get("stats") if corpse_weapon != null else null
+	check(not bool(soldier.call("add_weapon", "scatter")), "corpse add_weapon returns false")
+	check((soldier.get("slots") as Array) == corpse_slots, "corpse add_weapon leaves slots untouched")
+	check(not (soldier.get("slots") as Array).has("scatter"), "corpse add_weapon adds no scatter")
+	var corpse_weapon_after = soldier.get_node_or_null("Weapon")
+	var corpse_stats_after = corpse_weapon_after.get("stats") if corpse_weapon_after != null else null
+	check(corpse_stats_after == corpse_stats, "corpse add_weapon leaves equipped gun untouched")
+	check(not bool(soldier.get("is_alive")), "corpse add_weapon does not revive")
+	check(died_count[0] == 1, "corpse add_weapon emits no second died")
+	check(health_count[0] == 0, "corpse add_weapon emits no health_changed")
 	var respawn_tick := -1
 	for i in 220:
 		await physics_frame
@@ -181,4 +194,7 @@ func run_tests() -> void:
 	var healed := float(soldier.call("heal", 30.0))
 	check_close(healed, 100.0, 0.0001, "post-respawn heal clamps at max_hp")
 	check(health_count[0] == alive_before + 1, "alive heal emits health_changed")
+	# Live control: the gate re-opens after respawn on the same instance.
+	check(bool(soldier.call("add_weapon", "scatter")), "post-respawn add_weapon returns true")
+	check((soldier.get("slots") as Array).has("scatter"), "post-respawn add_weapon grants scatter")
 	soldier.queue_free()

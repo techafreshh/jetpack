@@ -157,6 +157,32 @@ func run_tests() -> void:
 	corpse_pad.queue_free()
 	await process_frame
 
+	# (b4) Corpse weapon-crate walkover is refused and the pad stays armed.
+	# The soldier owns the gate: add_weapon returns false while dead, so the
+	# weapon/alias branches in pickup apply_to treat it as refusal.
+	var corpse_crate = await make_pickup("weapon", "scatter", 12.0)
+	check(corpse_crate != null, "corpse weapon crate instantiates")
+	(soldier.get("slots") as Array).clear()
+	(soldier.get("slots") as Array).append("ranger_ar")
+	soldier.call("take_damage", 200.0)
+	check(not bool(soldier.get("is_alive")), "corpse crate setup is_alive is false")
+	check(not bool(corpse_crate.call("apply_to", soldier)), "corpse weapon apply_to returns false")
+	check(not (soldier.get("slots") as Array).has("scatter"), "corpse weapon walkover adds no scatter")
+	check(not bool(corpse_crate.get("disabled")), "corpse weapon pad stays enabled")
+	check_close(float(corpse_crate.get("time_left")), 0.0, 0.01, "corpse weapon pad sets no timer")
+	var corpse_crate_label = corpse_crate.get_node_or_null("TimerLabel")
+	check(corpse_crate_label != null and String(corpse_crate_label.get("text")) == "", "corpse weapon pad shows no timer label")
+	# Same crate still serves a live soldier with no respawn wait.
+	soldier.set("is_alive", true)
+	soldier.set("hp", 50.0)
+	check(bool(corpse_crate.call("apply_to", soldier)), "live apply_to on corpse weapon pad returns true")
+	check((soldier.get("slots") as Array).has("scatter"), "same weapon pad grants scatter once live")
+	check(bool(corpse_crate.get("disabled")), "same weapon pad enters disabled state")
+	var corpse_crate_label2 = corpse_crate.get_node_or_null("TimerLabel")
+	check(corpse_crate_label2 != null and String(corpse_crate_label2.get("text")) != "", "consumed weapon pad shows timer label")
+	corpse_crate.queue_free()
+	await process_frame
+
 	# (c) Weapon crate grants scatter and respawns within 20 s.
 	var crate = await make_pickup("weapon", "scatter", 12.0)
 	check(crate != null, "weapon crate instantiates")

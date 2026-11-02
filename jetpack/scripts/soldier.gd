@@ -245,6 +245,8 @@ func _config_respawn_point() -> Vector2:
 
 
 func add_weapon(id: String) -> bool:
+	if not is_alive:
+		return false
 	var path := "res://resources/weapons/%s.tres" % id
 	if not ResourceLoader.exists(path):
 		return false
