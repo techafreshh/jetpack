@@ -350,3 +350,10 @@ func run_tests() -> void:
 		bunker_max_x = maxf(bunker_max_x, soldier.position.x)
 	Input.action_release("move_right")
 	check(bunker_max_x < 980.0, "BunkerW blocks pure run (max x=%f)" % bunker_max_x)
+
+	# HealthPack sits above Plat1, off every sim path: it must survive untouched.
+	var pack := match_inst.get_node_or_null("HealthPack")
+	check(pack != null, "HealthPack present after sim")
+	if pack != null:
+		check(String(pack.get("kind")) == "health", "HealthPack kind is health (got %s)" % String(pack.get("kind")))
+		check(not bool(pack.get("disabled")), "HealthPack still enabled after sim (never picked up)")
