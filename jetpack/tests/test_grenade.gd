@@ -31,6 +31,14 @@ func wait_physics(n: int) -> void:
 		await physics_frame
 
 
+func wait_until_floor(soldier: CharacterBody2D, cap: int) -> bool:
+	for i in cap:
+		if soldier.is_on_floor():
+			return true
+		await physics_frame
+	return soldier.is_on_floor()
+
+
 func free_shells() -> void:
 	for n in root.find_children("Grenade", "RigidBody2D", true, false):
 		(n as Node).queue_free()
@@ -53,6 +61,13 @@ func run_tests() -> void:
 	check(packed != null, "soldier.tscn loads as PackedScene")
 	if packed == null:
 		return
+	var floor_body := StaticBody2D.new()
+	floor_body.position = Vector2.ZERO
+	var floor_shape := CollisionShape2D.new()
+	var world_edge := WorldBoundaryShape2D.new()
+	floor_shape.shape = world_edge
+	floor_body.add_child(floor_shape)
+	root.add_child(floor_body)
 	var soldier := packed.instantiate() as CharacterBody2D
 	check(soldier != null, "soldier.tscn instantiates CharacterBody2D")
 	if soldier == null:
@@ -61,6 +76,10 @@ func run_tests() -> void:
 	root.add_child(soldier)
 	await process_frame
 	await process_frame
+	var early_died := [0]
+	soldier.connect("died", func() -> void: early_died[0] += 1)
+	var settled := await wait_until_floor(soldier, 120)
+	check(settled, "soldier settles onto floor")
 
 	# (a) Two-slot count with max clamp.
 	check(int(soldier.get("grenade_count")) == 2, "fresh soldier carries 2 grenades")
@@ -154,6 +173,10 @@ func run_tests() -> void:
 	check(float(nade_os.get("fuse_left")) >= 0.0, "overshoot fuse never negative")
 	check_close(float(nade_os.get("fuse_left")), 0.0, 0.0001, "overshoot fuse clamps to exactly 0.0")
 	await free_shells()
+	check(bool(soldier.get("is_alive")), "soldier alive before blast-edge block")
+	check(str(soldier.get("last_death_cause")) != "fall", "no fall death before blast-edge block")
+	check(early_died[0] == 0, "no died before blast-edge block (got %d)" % early_died[0])
+	check(soldier.global_position.y < 2000.0, "soldier above kill-plane before blast-edge block (y=%f)" % soldier.global_position.y)
 
 	# (c) Soldier at the blast edge takes damage and knockback.
 	soldier.set("hp", 100.0)
@@ -184,6 +207,9 @@ func run_tests() -> void:
 	check(hp1 < hp0, "edge blast damages soldier (hp %f -> %f)" % [hp0, hp1])
 	check_close(hp1, 82.75, 5.0, "edge damage matches falloff")
 	check(kick.length() > 200.0, "edge blast knocks back >200 px/s (got %f)" % kick.length())
+	check(bool(soldier.get("is_alive")), "soldier alive after edge blast")
+	check(str(soldier.get("last_death_cause")) != "fall", "no fall death through edge blast")
+	check(early_died[0] == 0, "no died through edge blast (got %d)" % early_died[0])
 	# (d) Dead soldier inside the blast is skipped: no damage, no knockback, no second died.
 	var corpse_died := [0]
 	soldier.connect("died", func() -> void: corpse_died[0] += 1)
