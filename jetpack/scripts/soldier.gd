@@ -80,12 +80,10 @@ func _ready() -> void:
 	_saved_mask = collision_mask
 	# Never mutate the shared sub-resource when crouch-resizing.
 	if _body != null and _body.shape != null:
+		_body.shape = _body.shape.duplicate()
 		var rect := _body.shape as RectangleShape2D
 		if rect != null:
-			var dup := rect.duplicate() as RectangleShape2D
-			if dup != null:
-				_body.shape = dup
-				_stand_h = dup.size.y
+			_stand_h = rect.size.y
 	fuel = fuel_max
 	_ensure_input_actions()
 	_record_safe_position()
