@@ -150,5 +150,38 @@ func run_tests() -> void:
 	check(hp1 < hp0, "edge blast damages soldier (hp %f -> %f)" % [hp0, hp1])
 	check_close(hp1, 82.75, 5.0, "edge damage matches falloff")
 	check(kick.length() > 200.0, "edge blast knocks back >200 px/s (got %f)" % kick.length())
+	# (d) Dead soldier inside the blast is skipped: no damage, no knockback, no second died.
+	var corpse_died := [0]
+	soldier.connect("died", func() -> void: corpse_died[0] += 1)
+	soldier.set("hp", 100.0)
+	soldier.set("velocity", Vector2.ZERO)
+	soldier.call("take_damage", 200.0)
+	check(not bool(soldier.get("is_alive")), "corpse setup: lethal damage kills soldier")
+	check(corpse_died[0] == 1, "corpse setup: died emitted once (got %d)" % corpse_died[0])
+	check(soldier.is_in_group("damageable"), "corpse stays in damageable group through respawn window")
+	var corpse_hp0: float = soldier.get("hp")
+	var corpse_vel0: Vector2 = soldier.get("velocity")
+	var nade3 := nade_packed.instantiate() as RigidBody2D
+	root.add_child(nade3)
+	await process_frame
+	nade3.global_position = centre
+	nade3.set("freeze", true)
+	nade3.set("linear_velocity", Vector2.ZERO)
+	var corpse_spot := centre + Vector2(radius * 0.5, 0.0)
+	soldier.global_position = corpse_spot
+	nade3.call("prime")
+	for i in 220:
+		if is_instance_valid(nade3):
+			nade3.global_position = centre
+		soldier.global_position = corpse_spot
+		await physics_frame
+		if not is_instance_valid(nade3):
+			break
+	await wait_physics(3)
+	check(not bool(soldier.get("is_alive")), "corpse still dead after blast inside radius")
+	check(float(soldier.get("hp")) == corpse_hp0, "corpse blast deals no damage (hp=%f)" % float(soldier.get("hp")))
+	var corpse_kick: Vector2 = (soldier.get("velocity") as Vector2) - corpse_vel0
+	check(corpse_kick.length() < 1.0, "corpse blast applies no knockback (drift=%f)" % corpse_kick.length())
+	check(corpse_died[0] == 1, "corpse blast emits no second died (got %d)" % corpse_died[0])
 	await free_shells()
 	Input.action_release("throw_grenade")
