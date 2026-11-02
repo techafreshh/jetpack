@@ -156,6 +156,13 @@ func run_tests() -> void:
 		check(float(gw.get("_cooldown")) > 0.0, "fire_rate 1.0 arms cooldown")
 		gw.free()
 
+	# is_fireable_rate refusal predicate: last-resort driver refusal for
+	# direct-storage/bulk-load smuggles; over-MAX rates stay fireable.
+	for bad_pred in [0.0, -5.0, 0.05, INF, -INF, NAN]:
+		check(not WeaponResource.is_fireable_rate(bad_pred), "is_fireable_rate %f refuses" % bad_pred)
+	for ok_pred in [0.1, 0.8, 1.1, 10.0, 60.0, 100.0]:
+		check(WeaponResource.is_fireable_rate(ok_pred), "is_fireable_rate %f fires" % ok_pred)
+
 	# damage is editor-guarded: below-range and non-finite assignments
 	# clamp to the minimum, over-range clamps to the maximum, and
 	# shipped values pass through untouched.
