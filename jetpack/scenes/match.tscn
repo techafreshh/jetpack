@@ -1,9 +1,10 @@
-[gd_scene load_steps=5 format=3]
+[gd_scene load_steps=6 format=3]
 
 [ext_resource type="Script" path="res://scripts/match.gd" id="1"]
 [ext_resource type="PackedScene" path="res://scenes/arena/greybox.tscn" id="2"]
 [ext_resource type="PackedScene" path="res://scenes/soldier.tscn" id="3"]
 [ext_resource type="PackedScene" path="res://scenes/pickup.tscn" id="4"]
+[ext_resource type="Script" path="res://scripts/match/match_manager.gd" id="5"]
 
 [node name="Match" type="Node2D"]
 script = ExtResource("1")
@@ -30,3 +31,6 @@ kind = "ammo"
 [node name="GrenadePad" parent="." instance=ExtResource("4")]
 position = Vector2(1850, 200)
 kind = "grenade"
+
+[node name="MatchManager" type="Node" parent="."]
+script = ExtResource("5")
