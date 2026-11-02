@@ -71,12 +71,14 @@ func _physics_process(delta: float) -> void:
 
 
 func register_kill(killer_id: String, victim_id: String) -> void:
+	# Frozen once results are up: seated bots keep dying via died signals
+	# while the results screen shows, and those must not drift the table.
+	if match_state == STATE_RESULTS:
+		return
 	if scoreboard == null:
 		scoreboard = Scoreboard.new()
 	var killer := killer_id.strip_edges()
 	scoreboard.register_kill(killer_id, victim_id)
-	if match_state == STATE_RESULTS:
-		return
 	# A target-score hit ends the match on the same tick, from countdown or
 	# live, so the sub-60-tick gate holds however the probe drives the clock.
 	if sudden_death:
@@ -90,6 +92,8 @@ func register_kill(killer_id: String, victim_id: String) -> void:
 
 
 func record_death(victim_id: String) -> void:
+	if match_state == STATE_RESULTS:
+		return
 	if scoreboard == null:
 		scoreboard = Scoreboard.new()
 	scoreboard.record_death(victim_id)
@@ -239,6 +243,13 @@ func _reposition_bots() -> void:
 		var bot: Object = _bots[pid]
 		if bot == null or not is_instance_valid(bot):
 			continue
+		var alive: Variant = (bot as Object).get("is_alive")
+		if alive != null and not bool(alive):
+			# Leave dead bots alone to respawn naturally: soldier._respawn
+			# repairs collision layers, the damageable group, and timers,
+			# which a manual is_alive=true here would bypass (ghost bot).
+			idx += 1
+			continue
 		if bot is Node2D and points.size() > 0:
 			(bot as Node2D).global_position = points[idx % points.size()]
 		if (bot as Object).get("velocity") != null:
@@ -246,8 +257,6 @@ func _reposition_bots() -> void:
 		var max_hp: Variant = (bot as Object).get("max_hp")
 		if max_hp != null and (bot as Object).get("hp") != null:
 			(bot as Node).set("hp", float(max_hp))
-		if (bot as Object).get("is_alive") != null:
-			(bot as Node).set("is_alive", true)
 		idx += 1
 
 
