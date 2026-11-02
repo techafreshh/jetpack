@@ -102,6 +102,26 @@ func run_tests() -> void:
 	check(not bool(soldier.get("crouched")), "release clears crouched flag")
 	check_close((body.shape as RectangleShape2D).size.y, stand_h, 0.5, "stand restores collision height")
 
+	# (c2) Shared-scene crouch independence: two soldiers from one PackedScene stay isolated.
+	var soldierB := packed.instantiate() as CharacterBody2D
+	soldierB.position = Vector2(200, -40)
+	root.add_child(soldierB)
+	await process_frame
+	await process_frame
+	var bodyB := soldierB.get_node("Body") as CollisionShape2D
+	check(bodyB != null, "second soldier exposes Body")
+	check(body.shape != bodyB.shape, "soldiers get distinct shapes after _ready")
+	check_close(float(soldier.get("_stand_h")), float(soldierB.get("_stand_h")), 0.01, "both soldiers share stand height")
+	var iso_stand: float = float(soldier.get("_stand_h"))
+	soldier.call("_set_crouched", true)
+	check_close((body.shape as RectangleShape2D).size.y, iso_stand * 0.5, 0.5, "crouch-A halves A only")
+	check_close((bodyB.shape as RectangleShape2D).size.y, iso_stand, 0.5, "crouch-A leaves B untouched")
+	soldier.call("_set_crouched", false)
+	check_close((body.shape as RectangleShape2D).size.y, iso_stand, 0.5, "uncrouch restores A")
+	check_close((bodyB.shape as RectangleShape2D).size.y, iso_stand, 0.5, "B still at stand height")
+	soldierB.queue_free()
+	await process_frame
+
 	# (d) Thrust lifts off within 30 ticks.
 	soldier.set("fuel", float(soldier.get("fuel_max")))
 	var y0: float = soldier.position.y
