@@ -98,6 +98,28 @@ func run_tests() -> void:
 		check_close(float(bare.call("get_zoom")), 1.0, 0.001, "null stats zoom is 1.0")
 		bare.free()
 
+	# Cooldown rest invariant: a null-stats gun never ticks its gate, and
+	# an equipped idle gun clamps back to zero instead of drifting negative.
+	var idle_bare = make_weapon()
+	if idle_bare != null:
+		root.add_child(idle_bare)
+		Input.action_release("fire")
+		await wait_physics(60)
+		check_close(float(idle_bare.get("_cooldown")), 0.0, 0.0001, "null-stats gun holds _cooldown at 0.0")
+		root.remove_child(idle_bare)
+		idle_bare.free()
+	var idle_armed = make_weapon()
+	if idle_armed != null:
+		idle_armed.call("equip", ranger)
+		root.add_child(idle_armed)
+		check(bool(idle_armed.call("consume_shot")), "idle-gate setup shot succeeds")
+		Input.action_release("fire")
+		await wait_physics(60)
+		check(float(idle_armed.get("_cooldown")) >= 0.0, "equipped idle gun never goes negative")
+		check(bool(idle_armed.call("can_fire")), "equipped idle gate re-opens")
+		root.remove_child(idle_armed)
+		idle_armed.free()
+
 	# Invalid fire_rate fails loudly: zero/negative never fires, consumes
 	# nothing, arms no cooldown; a positive control still fires.
 	for bad_rate in [0.0, -5.0]:
