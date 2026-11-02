@@ -121,6 +121,40 @@ func run_tests() -> void:
 	await wait_physics(120)
 	check(get_nodes_in_group("explosion").is_empty(), "explosion FX auto-frees")
 
+	# (b2) Fuse-rest invariant: the stored fuse never drifts negative.
+	# Overshoot clamps to exactly 0.0 at the decrement (weapon-gate idiom).
+	var nade_rest := nade_packed.instantiate() as RigidBody2D
+	root.add_child(nade_rest)
+	await process_frame
+	nade_rest.global_position = Vector2(2000, -500)
+	nade_rest.set("freeze", true)
+	nade_rest.set("linear_velocity", Vector2.ZERO)
+	nade_rest.set("fuse_time", 0.05)
+	nade_rest.call("prime")
+	check_close(float(nade_rest.get("fuse_left")), 0.05, 0.0001, "tiny fuse primes at 0.05")
+	var fuse_negative := false
+	for i in 12:
+		await physics_frame
+		if is_instance_valid(nade_rest):
+			if float(nade_rest.get("fuse_left")) < 0.0:
+				fuse_negative = true
+		else:
+			break
+	check(not fuse_negative, "primed fuse never goes negative past detonation")
+	# Direct overshoot: a large delta on a near-zero fuse rests at exactly 0.0.
+	var nade_os := nade_packed.instantiate() as RigidBody2D
+	root.add_child(nade_os)
+	await process_frame
+	nade_os.global_position = Vector2(2000, -500)
+	nade_os.set("freeze", true)
+	nade_os.set("linear_velocity", Vector2.ZERO)
+	nade_os.call("prime")
+	nade_os.set("fuse_left", 0.01)
+	nade_os.call("_physics_process", 1.0)
+	check(float(nade_os.get("fuse_left")) >= 0.0, "overshoot fuse never negative")
+	check_close(float(nade_os.get("fuse_left")), 0.0, 0.0001, "overshoot fuse clamps to exactly 0.0")
+	await free_shells()
+
 	# (c) Soldier at the blast edge takes damage and knockback.
 	soldier.set("hp", 100.0)
 	soldier.set("velocity", Vector2.ZERO)

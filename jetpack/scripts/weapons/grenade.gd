@@ -43,7 +43,7 @@ func prime() -> void:
 func _physics_process(delta: float) -> void:
 	if not primed or _exploded:
 		return
-	fuse_left -= delta
+	fuse_left = maxf(0.0, fuse_left - delta)
 	_beep_accum += delta
 	if _beep_accum >= beep_interval:
 		_beep_accum = 0.0
