@@ -379,9 +379,9 @@ func _load_spawn_config() -> void:
 	_spawn_delay_ticks = int(cfg.get_value("respawn", "delay_ticks", Health.RESPAWN_TICKS))
 	_spawn_points.clear()
 	for i in 8:
-		var v: Vector2 = cfg.get_value("spawn%d" % i, "pos", Vector2.INF)
-		if v != Vector2.INF:
-			_spawn_points.append(v)
+		var raw: Variant = cfg.get_value("spawn%d" % i, "pos", Vector2.INF)
+		if raw is Vector2 and raw != Vector2.INF:
+			_spawn_points.append(raw)
 
 
 func _ensure_input_actions() -> void:
