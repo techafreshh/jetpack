@@ -255,6 +255,8 @@ func add_weapon(id: String) -> bool:
 
 
 func restock_ammo() -> void:
+	if not is_alive:
+		return
 	var weapon := get_node_or_null("Weapon")
 	if weapon == null:
 		return
