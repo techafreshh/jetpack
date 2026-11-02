@@ -2,14 +2,17 @@ extends SceneTree
 ## Headless proof that a corrupt non-Vector2 spawns.cfg value degrades on the
 ## spawner-less soldier loader: the guarded _load_spawn_config skips corrupt
 ## entries instead of faulting the typed assignment, respawn falls back to the
-## next valid point (or SAFE_FALLBACK when every entry is corrupt), and the
-## shared fixture is restored on every path before quit.
+## next valid point (or SAFE_FALLBACK when every entry is corrupt). Corrupt
+## fixtures live only in user:// temp copies reloaded via the injectable
+## loader path, so the shared res:// fixture is never written.
 ## Run: godot --headless --path jetpack --script res://tests/test_spawn_corrupt_guard.gd
 
 var passed := 0
 var failed := 0
 
 const SPAWN_CFG := "res://resources/config/spawns.cfg"
+const TMP_SINGLE := "user://test_spawn_corrupt_single.cfg"
+const TMP_ALL := "user://test_spawn_corrupt_all.cfg"
 const SAFE_FALLBACK := Vector2(200, 300)
 const KILL_Y := 2000.0
 
@@ -32,36 +35,33 @@ func check_close(actual: float, expected: float, tol: float, label: String) -> v
 	check(absf(actual - expected) <= tol, "%s (expected ~%f, got %f)" % [label, expected, actual])
 
 
-func _backup_cfg() -> String:
-	var f := FileAccess.open(SPAWN_CFG, FileAccess.READ)
-	if f == null:
+func _seed_tmp_cfg(tmp_path: String) -> ConfigFile:
+	var live := ConfigFile.new()
+	if live.load(SPAWN_CFG) != OK:
+		return null
+	var cfg := ConfigFile.new()
+	cfg.set_value("respawn", "delay_ticks", live.get_value("respawn", "delay_ticks", 180))
+	for i in 8:
+		cfg.set_value("spawn%d" % i, "pos", live.get_value("spawn%d" % i, "pos", Vector2.INF))
+	if cfg.save(tmp_path) != OK:
+		return null
+	return cfg
+
+
+func _write_corrupt_tmp_single() -> String:
+	var cfg := _seed_tmp_cfg(TMP_SINGLE)
+	if cfg == null:
 		return ""
-	var text := f.get_as_text()
-	f.close()
-	return text
-
-
-func _restore_cfg(text: String) -> bool:
-	var f := FileAccess.open(SPAWN_CFG, FileAccess.WRITE)
-	if f == null:
-		return false
-	f.store_string(text)
-	f.close()
-	return true
-
-
-func _write_corrupt_single() -> bool:
-	var cfg := ConfigFile.new()
-	if cfg.load(SPAWN_CFG) != OK:
-		return false
 	cfg.set_value("spawn0", "pos", "CORRUPT")
-	return cfg.save(SPAWN_CFG) == OK
+	if cfg.save(TMP_SINGLE) != OK:
+		return ""
+	return TMP_SINGLE
 
 
-func _write_corrupt_all() -> bool:
-	var cfg := ConfigFile.new()
-	if cfg.load(SPAWN_CFG) != OK:
-		return false
+func _write_corrupt_tmp_all() -> String:
+	var cfg := _seed_tmp_cfg(TMP_ALL)
+	if cfg == null:
+		return ""
 	cfg.set_value("spawn0", "pos", "CORRUPT")
 	cfg.set_value("spawn1", "pos", 12345)
 	cfg.set_value("spawn2", "pos", 3.14)
@@ -70,30 +70,32 @@ func _write_corrupt_all() -> bool:
 	cfg.set_value("spawn5", "pos", 0)
 	cfg.set_value("spawn6", "pos", 2.71)
 	cfg.set_value("spawn7", "pos", [3, 4])
-	return cfg.save(SPAWN_CFG) == OK
+	if cfg.save(TMP_ALL) != OK:
+		return ""
+	return TMP_ALL
 
 
 func run_tests() -> void:
 	await process_frame
 
-	var backup := _backup_cfg()
-	check(backup != "", "spawns.cfg backup read")
 	check(get_first_node_in_group("spawner") == null, "no spawner node in standalone tree")
 	var packed := load("res://scenes/soldier.tscn") as PackedScene
 	check(packed != null, "soldier.tscn loads as PackedScene")
 
-	var ready := backup != "" and packed != null
+	var ready := packed != null
 
 	# Pass 1: a single corrupt entry keeps the remaining valid points.
 	if ready:
-		check(_write_corrupt_single(), "single-corrupt spawns.cfg saves")
+		var tmp_single := _write_corrupt_tmp_single()
+		check(tmp_single != "", "single-corrupt temp cfg saves")
 		var soldier := packed.instantiate() as CharacterBody2D
 		check(soldier != null, "corrupt-cfg soldier instantiates")
-		if soldier != null:
+		if soldier != null and tmp_single != "":
 			soldier.position = Vector2(500, 400)
 			root.add_child(soldier)
 			await process_frame
 			await process_frame
+			soldier.call("_load_spawn_config", tmp_single)
 			check(bool(soldier.get("is_alive")), "corrupt-cfg soldier _ready completes alive (no fault)")
 			var cached: Array = soldier.get("_spawn_points")
 			check(cached.size() == 7, "single-corrupt cache keeps 7 valid points (got %d)" % cached.size())
@@ -122,14 +124,16 @@ func run_tests() -> void:
 
 	# Pass 2: every entry corrupt degrades to SAFE_FALLBACK.
 	if ready:
-		check(_write_corrupt_all(), "all-corrupt spawns.cfg saves")
+		var tmp_all := _write_corrupt_tmp_all()
+		check(tmp_all != "", "all-corrupt temp cfg saves")
 		var flat := packed.instantiate() as CharacterBody2D
 		check(flat != null, "all-corrupt soldier instantiates")
-		if flat != null:
+		if flat != null and tmp_all != "":
 			flat.position = Vector2(500, 400)
 			root.add_child(flat)
 			await process_frame
 			await process_frame
+			flat.call("_load_spawn_config", tmp_all)
 			check(bool(flat.get("is_alive")), "all-corrupt soldier _ready completes alive (no fault)")
 			var empty_cache: Array = flat.get("_spawn_points")
 			check(empty_cache.is_empty(), "all-corrupt cache is empty (got %d)" % empty_cache.size())
@@ -153,20 +157,22 @@ func run_tests() -> void:
 			flat.queue_free()
 			await process_frame
 
-	# Fixture restore on every path, then prove the restored file loads.
-	if backup != "":
-		check(_restore_cfg(backup), "spawns.cfg fixture restored")
-		var fresh := ConfigFile.new()
-		check(fresh.load(SPAWN_CFG) == OK, "restored spawns.cfg loads OK")
-		check((fresh.get_value("spawn0", "pos", Vector2.INF) as Vector2) == Vector2(200, 300), "restored spawn0 is Vector2(200, 300)")
-		if packed != null:
-			var control := packed.instantiate() as CharacterBody2D
-			if control != null:
-				control.position = Vector2(500, 400)
-				root.add_child(control)
-				await process_frame
-				await process_frame
-				var control_cache: Array = control.get("_spawn_points")
-				check(control_cache.size() == 8, "restored cache has 8 entries (got %d)" % control_cache.size())
-				control.queue_free()
-				await process_frame
+	# Shared fixture untouched: no restore step ran, the live file still loads
+	# with its committed values and a control soldier caches all 8 points.
+	var fresh := ConfigFile.new()
+	check(fresh.load(SPAWN_CFG) == OK, "shared spawns.cfg loads OK")
+	check((fresh.get_value("spawn0", "pos", Vector2.INF) as Vector2) == Vector2(200, 300), "shared spawn0 is Vector2(200, 300)")
+	if packed != null:
+		var control := packed.instantiate() as CharacterBody2D
+		if control != null:
+			control.position = Vector2(500, 400)
+			root.add_child(control)
+			await process_frame
+			await process_frame
+			var control_cache: Array = control.get("_spawn_points")
+			check(control_cache.size() == 8, "shared cache has 8 entries (got %d)" % control_cache.size())
+			control.queue_free()
+			await process_frame
+
+	DirAccess.remove_absolute(TMP_SINGLE)
+	DirAccess.remove_absolute(TMP_ALL)
