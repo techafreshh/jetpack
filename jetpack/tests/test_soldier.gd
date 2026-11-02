@@ -182,4 +182,35 @@ func run_tests() -> void:
 	bare.queue_free()
 	await process_frame
 
+	# (h) Non-rectangle Body shape: _ready survives a CircleShape2D swap.
+	var circ_soldier := CharacterBody2D.new()
+	circ_soldier.set_script(load("res://scripts/soldier.gd"))
+	var circ_body := CollisionShape2D.new()
+	circ_body.name = "Body"
+	var circle := CircleShape2D.new()
+	circle.radius = 16.0
+	circ_body.shape = circle
+	circ_body.position = Vector2(0, -32)
+	circ_soldier.add_child(circ_body)
+	circ_soldier.position = Vector2(0, -40)
+	root.add_child(circ_soldier)
+	await process_frame
+	await process_frame
+	await wait_physics(5)
+	check(is_instance_valid(circ_soldier), "circle soldier node stays valid")
+	check(bool(circ_soldier.get("is_alive")), "circle soldier stays alive")
+	var circ_shape := (circ_soldier.get_node("Body") as CollisionShape2D).shape
+	check(circ_shape is CircleShape2D, "circle soldier keeps CircleShape2D after ready")
+	check(circ_shape != circle, "circle soldier duplicates shape, shared resource untouched")
+	check_close(float(circ_soldier.get("_stand_h")), 64.0, 0.01, "circle soldier keeps default stand height")
+	check_close((circ_shape as CircleShape2D).radius, 16.0, 0.01, "circle soldier radius untouched by ready")
+	circ_soldier.call("_set_crouched", true)
+	check(bool(circ_soldier.get("crouched")), "circle soldier crouch flag sets")
+	check((circ_soldier.get_node("Body") as CollisionShape2D).shape is CircleShape2D, "circle soldier crouch leaves shape untouched")
+	circ_soldier.call("_set_crouched", false)
+	check(not bool(circ_soldier.get("crouched")), "circle soldier crouch flag clears")
+	check((circ_soldier.get_node("Body") as CollisionShape2D).shape is CircleShape2D, "circle soldier uncrouch leaves shape untouched")
+	circ_soldier.queue_free()
+	await process_frame
+
 	release_all()
