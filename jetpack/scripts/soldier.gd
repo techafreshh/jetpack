@@ -166,6 +166,8 @@ func apply_knockback(impulse: Vector2) -> void:
 
 
 func add_grenades(n: int) -> int:
+	if not is_alive:
+		return grenade_count
 	grenade_count = mini(grenade_max, grenade_count + n)
 	_update_arc_preview()
 	return grenade_count
