@@ -63,6 +63,7 @@ func run_tests() -> void:
 	await physics_frame
 	check(bool(soldier.get("is_alive")), "soldier at exactly y=2000 lives")
 	check(died_count[0] == 0, "no died at exactly y=2000 (got %d)" % died_count[0])
+	check(str(soldier.get("last_death_cause")) == "", "cause is empty before any death")
 
 	# Below the plane: environmental death within ticks, exactly one died.
 	soldier.global_position = Vector2(1200, 2100)
@@ -76,6 +77,7 @@ func run_tests() -> void:
 	check(death_tick >= 1 and death_tick <= 5, "below-plane teleport kills within 5 ticks (got %d)" % death_tick)
 	check(not bool(soldier.get("is_alive")), "below-plane soldier is_alive is false")
 	check(died_count[0] == 1, "died emitted exactly once (got %d)" % died_count[0])
+	check(str(soldier.get("last_death_cause")) == "fall", "fall death records cause fall")
 	check(int(soldier.collision_layer) == 0 and int(soldier.collision_mask) == 0, "fall death zeroes collision")
 
 	# Standard spawner respawn: 170-190 ticks, full HP, above the plane.

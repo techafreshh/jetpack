@@ -43,6 +43,8 @@ var hp := 100.0
 var max_hp := 100.0
 var is_alive := true
 var respawn_ticks_left := 0
+## Why the soldier last died: "fall" (kill-plane) or "damage" (lethal take_damage); "" before any death.
+var last_death_cause := ""
 ## Compiled-in spawner-less fallback; matches spawns.cfg spawn0.
 const SAFE_FALLBACK := Vector2(200, 300)
 ## Most recent above-plane position; spawner-less respawn prefers it.
@@ -99,7 +101,7 @@ func _physics_process(delta: float) -> void:
 		return
 	_record_safe_position()
 	if global_position.y > KILL_Y:
-		_die()
+		_die("fall")
 		return
 	var was_floor := is_on_floor()
 
@@ -148,7 +150,7 @@ func take_damage(amount: float) -> void:
 	hp = Health.apply_damage(hp, amount)
 	health_changed.emit(hp, max_hp)
 	if hp <= 0.0:
-		_die()
+		_die("damage")
 
 
 func apply_knockback(impulse: Vector2) -> void:
@@ -170,12 +172,13 @@ func respawn_seconds_left() -> float:
 	return float(respawn_ticks_left) / 60.0
 
 
-func _die() -> void:
+func _die(cause: String = "damage") -> void:
 	is_alive = false
 	respawn_ticks_left = _respawn_delay_ticks()
 	velocity = Vector2.ZERO
 	collision_layer = 0
 	collision_mask = 0
+	last_death_cause = cause
 	died.emit()
 	print("SOLDIER DIED")
 
