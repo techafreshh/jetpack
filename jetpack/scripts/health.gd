@@ -29,7 +29,8 @@ static func has_dead_flag(node: Object) -> bool:
 
 
 ## Strict corpse check: only an explicit `is_dead == true` counts as dead.
-## Null and plain nodes are not dead.
+## Null and plain nodes are not dead. Group-leave is the primary corpse
+## exclusion; this check is the race backup for out-of-band flags.
 static func is_dead(node: Object) -> bool:
 	return has_dead_flag(node) and bool(node.get("is_dead"))
 
