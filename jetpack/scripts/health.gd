@@ -22,6 +22,18 @@ static func has_alive_flag(node: Object) -> bool:
 	return node != null and node.has_method("get") and "is_alive" in node
 
 
+## Single home of the dummy-corpse duck-type idiom: whether a node exposes an
+## `is_dead` flag. Null-safe; nodes without the flag return false.
+static func has_dead_flag(node: Object) -> bool:
+	return node != null and node.has_method("get") and "is_dead" in node
+
+
+## Strict corpse check: only an explicit `is_dead == true` counts as dead.
+## Null and plain nodes are not dead.
+static func is_dead(node: Object) -> bool:
+	return has_dead_flag(node) and bool(node.get("is_dead"))
+
+
 ## Strict allowlist for foe selection: only nodes exposing a true `is_alive`
 ## count as live foes. Dummies (no flag), the dead, and null never count.
 static func is_live_foe(node: Object) -> bool:
