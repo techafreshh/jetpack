@@ -201,7 +201,15 @@ func _load_config() -> void:
 	if is_equal_approx(heal_amount, 30.0):
 		heal_amount = _cfg_float(cfg, "health", "heal_amount", heal_amount)
 	if weapon_id == "scatter":
-		weapon_id = String(cfg.get_value("weapon", "weapon_id", weapon_id))
+		weapon_id = _cfg_weapon_id(cfg, "weapon", "weapon_id", weapon_id)
+
+
+static func _cfg_weapon_id(cfg: ConfigFile, section: String, key: String, fallback: String) -> String:
+	var raw: Variant = cfg.get_value(section, key, fallback)
+	if raw is String and WEAPON_IDS.has(raw):
+		return raw
+	push_warning("pickup: invalid %s/%s, keeping default" % [section, key])
+	return fallback
 
 
 static func _cfg_float(cfg: ConfigFile, section: String, key: String, fallback: float) -> float:

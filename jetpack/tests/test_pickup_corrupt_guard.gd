@@ -55,6 +55,15 @@ func _write_corrupt_pickups() -> bool:
 	cfg.set_value("health", "respawn_s", [1, 2])
 	cfg.set_value("weapon", "respawn_s", Vector2(1, 2))
 	cfg.set_value("ammo", "respawn_s", true)
+	cfg.set_value("weapon", "weapon_id", [1, 2])
+	return cfg.save(PICKUPS_CFG) == OK
+
+
+func _write_weapon_id(bad_id: Variant) -> bool:
+	var cfg := ConfigFile.new()
+	if cfg.load(PICKUPS_CFG) != OK:
+		return false
+	cfg.set_value("weapon", "weapon_id", bad_id)
 	return cfg.save(PICKUPS_CFG) == OK
 
 
@@ -104,9 +113,51 @@ func run_tests() -> void:
 			check(is_instance_valid(crate), "corrupt-cfg weapon pad _ready completes valid (no fault)")
 			check(crate.is_inside_tree(), "corrupt-cfg weapon pad stays in tree")
 			check_close(float(crate.get("respawn_s")), 15.0, 0.0001, "corrupt weapon respawn_s keeps default 15.0")
+			check(String(crate.get("weapon_id")) == "scatter", "corrupt non-string weapon_id keeps default scatter")
+			check(String(crate.call("effective_weapon_id")) == "scatter", "corrupt non-string effective_weapon_id is scatter")
 			crate.queue_free()
 			await process_frame
 		check(_restore_cfg(PICKUPS_CFG, backup), "pickups.cfg fixture restored after pass 2")
+
+	# Pass 3: corrupt unknown-string weapon_id keeps the export default.
+	if ready:
+		check(_write_weapon_id("CORRUPT"), "corrupt unknown-string weapon_id saves (pass 3)")
+		var bad_str = await make_pickup("weapon")
+		check(bad_str != null, "bad-string weapon pad instantiates")
+		if bad_str != null:
+			check(is_instance_valid(bad_str), "bad-string weapon pad _ready completes valid (no fault)")
+			check(bad_str.is_inside_tree(), "bad-string weapon pad stays in tree")
+			check(String(bad_str.get("weapon_id")) == "scatter", "unknown-string weapon_id keeps default scatter")
+			check(String(bad_str.call("effective_weapon_id")) == "scatter", "unknown-string effective_weapon_id is scatter")
+			bad_str.queue_free()
+			await process_frame
+		check(_restore_cfg(PICKUPS_CFG, backup), "pickups.cfg fixture restored after pass 3")
+
+	# Pass 4: every other corrupt weapon_id shape keeps the default.
+	if ready:
+		for bad in [42, true, Vector2(1, 2), "", "SCATTER", " longbow "]:
+			check(_write_weapon_id(bad), "corrupt weapon_id saves (%s)" % str(bad))
+			var pad_bad = await make_pickup("weapon")
+			check(pad_bad != null, "corrupt-weapon_id pad instantiates (%s)" % str(bad))
+			if pad_bad != null:
+				check(String(pad_bad.get("weapon_id")) == "scatter", "corrupt weapon_id keeps default (%s)" % str(bad))
+				check(String(pad_bad.call("effective_weapon_id")) == "scatter", "corrupt effective_weapon_id is scatter (%s)" % str(bad))
+				pad_bad.queue_free()
+				await process_frame
+		check(_restore_cfg(PICKUPS_CFG, backup), "pickups.cfg fixture restored after pass 4")
+
+	# Pass 5: valid weapon ids still load through the guard.
+	if ready:
+		for good in ["scatter", "longbow", "ranger_ar"]:
+			check(_write_weapon_id(good), "valid weapon_id saves (%s)" % good)
+			var pad_good = await make_pickup("weapon")
+			check(pad_good != null, "valid-weapon_id pad instantiates (%s)" % good)
+			if pad_good != null:
+				check(String(pad_good.get("weapon_id")) == good, "valid weapon_id loads (%s)" % good)
+				check(String(pad_good.call("effective_weapon_id")) == good, "valid effective_weapon_id loads (%s)" % good)
+				pad_good.queue_free()
+				await process_frame
+		check(_restore_cfg(PICKUPS_CFG, backup), "pickups.cfg fixture restored after pass 5")
 
 	# Fixture restore on every path, then prove restored file loads live.
 	if backup != "":
