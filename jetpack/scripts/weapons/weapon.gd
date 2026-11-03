@@ -259,6 +259,21 @@ func _show_muzzle_flash() -> void:
 		muzzle_flash.visible = true
 
 
+func _expire_tracer(tracer) -> void:
+	if is_instance_valid(tracer):
+		_tracers.erase(tracer)
+		if not tracer.is_queued_for_deletion():
+			tracer.queue_free()
+		return
+	# Stale tween for an evicted tracer: the ledger no longer holds it,
+	# so sweep dead refs instead of erasing an invalid instance.
+	var live: Array[Line2D] = []
+	for t in _tracers:
+		if is_instance_valid(t) and not t.is_queued_for_deletion():
+			live.append(t)
+	_tracers = live
+
+
 func _spawn_tracer(a: Vector2, b: Vector2) -> void:
 	var cap: int = maxi(1, max_tracers)
 	var live: Array[Line2D] = []
@@ -281,9 +296,13 @@ func _spawn_tracer(a: Vector2, b: Vector2) -> void:
 	var tween: Tween = null
 	if is_inside_tree():
 		tween = tracer.create_tween()
+	else:
+		var tree := Engine.get_main_loop() as SceneTree
+		if tree != null:
+			tween = tree.create_tween()
 	if tween != null:
 		tween.set_process_mode(Tween.TWEEN_PROCESS_PHYSICS)
 		tween.tween_property(tracer, "modulate:a", 0.0, tracer_lifetime)
-		tween.tween_callback(tracer.queue_free)
+		tween.tween_callback(_expire_tracer.bind(tracer))
 	_tracers.append(tracer)
 
