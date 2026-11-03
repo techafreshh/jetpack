@@ -305,6 +305,62 @@ func run_tests() -> void:
 	corpse_nade_pad.queue_free()
 	await process_frame
 
+	# (d5) Soldier owns the ammo bool gate; the pad pre-check is defense-in-depth.
+	# restock_ammo returns false while dead, missing Weapon/stats, or full mag+reserve.
+	var d5_weapon = soldier.get_node_or_null("Weapon")
+	check(d5_weapon != null, "d5 soldier has Weapon for direct gate")
+	if d5_weapon != null:
+		var d5_stats = d5_weapon.get("stats")
+		d5_weapon.set("ammo", int(d5_stats.get("mag_size")))
+		d5_weapon.set("reserve_left", int(d5_stats.get("reserve")))
+		var d5_full_ammo := int(d5_weapon.get("ammo"))
+		var d5_full_reserve := int(d5_weapon.get("reserve_left"))
+		check(not bool(soldier.call("restock_ammo")), "d5 full-stock restock_ammo returns false")
+		check(int(d5_weapon.get("ammo")) == d5_full_ammo, "d5 full-stock leaves mag unchanged")
+		check(int(d5_weapon.get("reserve_left")) == d5_full_reserve, "d5 full-stock leaves reserve unchanged")
+		d5_weapon.set("reserve_left", int(d5_stats.get("reserve")))
+		while int(d5_weapon.get("ammo")) > 0:
+			d5_weapon.set("_cooldown", 0.0)
+			d5_weapon.call("consume_shot")
+		check(int(d5_weapon.get("ammo")) == 0, "d5 mag emptied for direct gate")
+		check(bool(soldier.call("restock_ammo")), "d5 partial-stock restock_ammo returns true")
+		check(int(d5_weapon.get("ammo")) == int(d5_stats.get("mag_size")), "d5 partial restock refills mag")
+		check(int(d5_weapon.get("reserve_left")) == int(d5_stats.get("reserve")), "d5 partial restock refills reserve")
+		d5_weapon.set("ammo", int(d5_stats.get("mag_size")))
+		d5_weapon.set("reserve_left", 0)
+		check(bool(soldier.call("restock_ammo")), "d5 mag-full-only restock_ammo returns true")
+		check(int(d5_weapon.get("ammo")) == int(d5_stats.get("mag_size")), "d5 AND-semantics refill ends mag full")
+		check(int(d5_weapon.get("reserve_left")) == int(d5_stats.get("reserve")), "d5 AND-semantics refill ends reserve full")
+		var d5_corpse_ammo := int(d5_weapon.get("ammo"))
+		soldier.call("take_damage", 200.0)
+		check(not bool(soldier.get("is_alive")), "d5 corpse setup is_alive is false")
+		check(not bool(soldier.call("restock_ammo")), "d5 corpse restock_ammo returns false")
+		check(int(d5_weapon.get("ammo")) == d5_corpse_ammo, "d5 corpse restock leaves mag untouched")
+		soldier.set("is_alive", true)
+		soldier.set("hp", 50.0)
+		check(bool(soldier.get("is_alive")), "d5 revived soldier is_alive is true")
+	var d5_bare := CharacterBody2D.new()
+	d5_bare.set_script(load("res://scripts/soldier.gd"))
+	root.add_child(d5_bare)
+	await process_frame
+	await process_frame
+	check(d5_bare.get_node_or_null("Weapon") == null, "d5 bare soldier has no Weapon")
+	check(not bool(d5_bare.call("restock_ammo")), "d5 missing-Weapon restock_ammo returns false")
+	d5_bare.queue_free()
+	await process_frame
+	var d5_nostats = await make_soldier()
+	check(d5_nostats != null, "d5 null-stats soldier instantiates")
+	if d5_nostats != null:
+		var d5_ns_weapon = d5_nostats.get_node_or_null("Weapon")
+		check(d5_ns_weapon != null, "d5 null-stats soldier has Weapon")
+		if d5_ns_weapon != null:
+			d5_ns_weapon.set("stats", null)
+			check(not bool(d5_nostats.call("restock_ammo")), "d5 null-stats restock_ammo returns false")
+		d5_nostats.queue_free()
+		await process_frame
+	check(bool(soldier.get("is_alive")), "d5 fixture soldier still alive for short-timer block")
+	soldier.set("hp", 50.0)
+
 	# (e) Short-timer pad re-enables after expiry and clears the label.
 	var quick = await make_pickup("health", "scatter", 0.3)
 	soldier.set("hp", 50.0)
