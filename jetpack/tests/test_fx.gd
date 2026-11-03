@@ -196,3 +196,12 @@ func run_tests() -> void:
 				check(burst.emitting, "detonate restarts burst (got emitting=false)")
 			boom.queue_free()
 			await process_frame
+		var bare := boom_scr.new() as Node2D
+		check(bare != null, "tree-less explosion instantiates Node2D")
+		if bare != null:
+			check(not bare.is_inside_tree(), "tree-less explosion starts outside tree")
+			bare.position = Vector2(5000, 5000)
+			bare.call("detonate")
+			check(bare.get("_detonated") == true, "tree-less detonate marks _detonated")
+			check(bare.get_node_or_null("Burst") == null, "tree-less detonate skips burst without error")
+			bare.free()
