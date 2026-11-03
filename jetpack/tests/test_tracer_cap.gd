@@ -155,6 +155,26 @@ func run_tests() -> void:
 		check((off.get("_tracers") as Array).size() == 4, "off-tree ledger holds exactly cap entries (got %d)" % (off.get("_tracers") as Array).size())
 		off.free()
 
+	# Off-tree proof: _fire without an override never touches
+	# get_global_mouse_position(); _aim_point falls back to global_position
+	# so _fire's zero-length branch takes a deterministic east shot.
+	var off2 = scr.new()
+	check(off2 != null, "off-tree _fire weapon instantiates")
+	if off2 != null:
+		off2.call("equip", ranger)
+		check(not off2.is_inside_tree(), "off-tree _fire weapon stays off-tree")
+		check(not bool(off2.get("has_aim_override")), "off-tree _fire override off by default")
+		check((off2.call("_aim_point") as Vector2).is_equal_approx(off2.global_position), "off-tree _aim_point falls back to global_position")
+		off2.call("_fire")
+		var off2_live := live_tracers_of(off2)
+		check(off2_live.size() == 1, "off-tree _fire leaves one tracer (got %d)" % off2_live.size())
+		if off2_live.size() == 1:
+			var p0: Vector2 = (off2_live[0] as Line2D).get_point_position(0)
+			var p1: Vector2 = (off2_live[0] as Line2D).get_point_position(1)
+			check(absf((p1 - p0).length() - float(ranger.get("range"))) <= 1.0, "off-tree _fire spans full range (got %f)" % (p1 - p0).length())
+			check(p1.x > p0.x, "off-tree _fire heads east")
+		off2.free()
+
 	# Null-stats guard: a bare weapon's _fire_ray is a silent no-op.
 	var bare = scr.new()
 	check(bare != null, "bare weapon instantiates")

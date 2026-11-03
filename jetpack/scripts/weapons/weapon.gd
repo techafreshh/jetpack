@@ -151,6 +151,8 @@ func clear_aim_override() -> void:
 func _aim_point() -> Vector2:
 	if has_aim_override:
 		return aim_override
+	if not is_inside_tree():
+		return global_position
 	return get_global_mouse_position()
 
 
