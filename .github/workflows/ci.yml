@@ -80,3 +80,62 @@ jobs:
             exit 1
           fi
           exit "$fail"
+
+  web-export:
+    name: Web export + size gate + serve smoke test
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+
+      - name: Install Godot 4.7
+        run: |
+          curl -fsSL -o /tmp/godot.zip https://github.com/godotengine/godot/releases/download/4.7-stable/Godot_v4.7-stable_linux.x86_64.zip
+          unzip -q -o /tmp/godot.zip -d /tmp/godot
+          sudo install -m 755 /tmp/godot/Godot_v4.7-stable_linux.x86_64 /usr/local/bin/godot
+          godot --version
+
+      - name: Install Godot 4.7 export templates
+        run: |
+          set -eu
+          mkdir -p "$HOME/.local/share/godot/export_templates/4.7.stable"
+          curl -fsSL -o /tmp/export-templates.tpz https://github.com/godotengine/godot/releases/download/4.7-stable/Godot_v4.7-stable_export_templates.tpz
+          unzip -q -o /tmp/export-templates.tpz -d "$HOME/.local/share/godot/export_templates/4.7.stable"
+          test -f "$HOME/.local/share/godot/export_templates/4.7.stable/web_release.zip"
+          echo "EXPORT_TEMPLATES_OK"
+
+      - name: Export Web preset and zip with size gate
+        run: |
+          set -eu
+          bash jetpack/tools/export_web.sh
+          test -f jetpack/build/web.zip
+          du -sb jetpack/build/web.zip
+          size="$(wc -c <jetpack/build/web.zip)"
+          echo "web.zip size: $size bytes (limit 52428800)"
+          test "$size" -le 52428800
+          echo "WEB_SIZE_GATE_OK"
+
+      - name: Run serve.py test suite
+        run: |
+          set -eu
+          cd jetpack
+          python3 -m unittest tools.test_serve -v
+
+      - name: Smoke-test served export
+        run: |
+          set -eu
+          cd jetpack
+          python3 tools/serve.py >serve.log 2>&1 &
+          srv=$!
+          trap 'kill "$srv" 2>/dev/null || true' EXIT
+          for i in $(seq 1 50); do
+            if curl --fail --silent http://127.0.0.1:8000/health; then
+              break
+            fi
+            sleep 0.2
+          done
+          curl --fail http://127.0.0.1:8000/health | grep -q 'OK JETPACK'
+          curl --fail http://127.0.0.1:8000/index.html -o /dev/null
+          echo "SERVE_SMOKE_OK"
+          cat serve.log
