@@ -1,7 +1,8 @@
-[gd_scene load_steps=3 format=3]
+[gd_scene load_steps=4 format=3]
 
 [ext_resource type="Script" path="res://scripts/ui/pause.gd" id="1"]
 [ext_resource type="Script" path="res://scripts/ui/hold_button.gd" id="2"]
+[ext_resource type="PackedScene" path="res://scenes/ui/settings.tscn" id="3"]
 
 [node name="Pause" type="CanvasLayer" groups=["pause_menu"]]
 visible = false
@@ -78,56 +79,6 @@ process_mode = 3
 custom_minimum_size = Vector2(300, 48)
 text = "Settings"
 
-[node name="SettingsPanel" type="Control" parent="."]
+[node name="SettingsPanel" parent="." instance=ExtResource("3")]
 visible = false
-anchor_left = 0.5
-anchor_top = 0.5
-anchor_right = 0.5
-anchor_bottom = 0.5
-offset_left = -180.0
-offset_top = -140.0
-offset_right = 180.0
-offset_bottom = 140.0
-
-[node name="SettingsTitle" type="Label" parent="SettingsPanel"]
-anchor_left = 0.5
-anchor_right = 0.5
-offset_left = -180.0
-offset_top = 0.0
-offset_right = 180.0
-offset_bottom = 36.0
-mouse_filter = 2
-theme_override_font_sizes/font_size = 28
-text = "SETTINGS"
-horizontal_alignment = 1
-
-[node name="VolumeSlider" type="HSlider" parent="SettingsPanel"]
 process_mode = 3
-anchor_left = 0.5
-anchor_right = 0.5
-offset_left = -140.0
-offset_top = 60.0
-offset_right = 140.0
-offset_bottom = 84.0
-max_value = 100.0
-value = 80.0
-
-[node name="FlashCheck" type="CheckButton" parent="SettingsPanel"]
-process_mode = 3
-anchor_left = 0.5
-anchor_right = 0.5
-offset_left = -140.0
-offset_top = 100.0
-offset_right = 140.0
-offset_bottom = 132.0
-text = "Reduced Flash"
-
-[node name="BackButton" type="Button" parent="SettingsPanel"]
-process_mode = 3
-anchor_left = 0.5
-anchor_right = 0.5
-offset_left = -140.0
-offset_top = 156.0
-offset_right = 140.0
-offset_bottom = 200.0
-text = "Back"
