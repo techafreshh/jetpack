@@ -8,6 +8,27 @@ var passed := 0
 var failed := 0
 
 
+# No-op double for the grenade effect gate: passes every pre-guard
+# (alive, below max) but add_grenades returns without adding, mirroring
+# the soldier.gd dead-host early return shape.
+class NoOpNadeHost extends Node2D:
+	var is_alive := true
+	var grenade_count := 1
+	var grenade_max := 2
+	func add_grenades(n: int) -> int:
+		return grenade_count
+
+
+# Counting control: clamps upward like the live soldier.
+class CountingNadeHost extends Node2D:
+	var is_alive := true
+	var grenade_count := 0
+	var grenade_max := 2
+	func add_grenades(n: int) -> int:
+		grenade_count = mini(grenade_max, grenade_count + n)
+		return grenade_count
+
+
 func _initialize() -> void:
 	await run_tests()
 	print("Results: %d passed, %d failed" % [passed, failed])
@@ -303,6 +324,46 @@ func run_tests() -> void:
 	check(bool(corpse_nade_pad.get("disabled")), "corpse grenade pad enters disabled state")
 	corpse_ammo_pad.queue_free()
 	corpse_nade_pad.queue_free()
+	await process_frame
+
+	# (d4n) No-op add_grenades stays armed: the host passes every pre-guard
+	# (alive, below max) but the effect adds nothing, so the before/after
+	# count gate must refuse without burning the pad. Counting control proves
+	# the gate still consumes on a real restock.
+	var noop_host := NoOpNadeHost.new()
+	noop_host.set("is_alive", true)
+	noop_host.set("grenade_count", 1)
+	noop_host.set("grenade_max", 2)
+	root.add_child(noop_host)
+	await process_frame
+	check(Health.is_host_alive(noop_host), "noop host passes alive pre-guard")
+	var noop_pad = await make_pickup("grenade", "scatter", 10.0)
+	check(noop_pad != null, "noop grenade pad instantiates")
+	var noop_before := int(noop_host.get("grenade_count"))
+	check(not bool(noop_pad.call("apply_to", noop_host)), "noop grenade apply_to returns false")
+	check(not bool(noop_pad.get("disabled")), "noop grenade pad stays enabled")
+	check_close(float(noop_pad.get("time_left")), 0.0, 0.01, "noop grenade pad sets no timer")
+	var noop_label = noop_pad.get_node_or_null("TimerLabel")
+	check(noop_label != null and String(noop_label.get("text")) == "", "noop grenade pad shows no timer label")
+	check(int(noop_host.get("grenade_count")) == noop_before, "noop grenade walkover leaves count unchanged")
+	noop_pad.queue_free()
+	noop_host.queue_free()
+	await process_frame
+	var counting_host := CountingNadeHost.new()
+	counting_host.set("is_alive", true)
+	counting_host.set("grenade_count", 0)
+	counting_host.set("grenade_max", 2)
+	root.add_child(counting_host)
+	await process_frame
+	var counting_pad = await make_pickup("grenade", "scatter", 10.0)
+	check(counting_pad != null, "counting grenade pad instantiates")
+	check(bool(counting_pad.call("apply_to", counting_host)), "counting grenade apply_to returns true")
+	check(int(counting_host.get("grenade_count")) == int(counting_host.get("grenade_max")), "counting grenade pad restores max")
+	check(bool(counting_pad.get("disabled")), "counting grenade pad enters disabled state")
+	var counting_label = counting_pad.get_node_or_null("TimerLabel")
+	check(counting_label != null and String(counting_label.get("text")) != "", "consumed counting grenade pad shows timer label")
+	counting_pad.queue_free()
+	counting_host.queue_free()
 	await process_frame
 
 	# (d5) Soldier owns the ammo bool gate; the pad pre-check is defense-in-depth.
