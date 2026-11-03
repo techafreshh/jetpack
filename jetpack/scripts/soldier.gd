@@ -521,7 +521,7 @@ func _set_crouched(on: bool) -> void:
 func _load_config(movement_path: String = CONFIG_PATH, grenade_path: String = GRENADE_CONFIG_PATH) -> void:
 	var cfg := ConfigFile.new()
 	if cfg.load(movement_path) != OK:
-		push_warning("soldier: missing %s, using export defaults" % CONFIG_PATH)
+		push_warning("soldier: missing %s, using export defaults" % movement_path)
 		return
 	run_speed = _cfg_float(cfg, "movement", "run_speed", run_speed)
 	ground_accel = _cfg_float(cfg, "movement", "ground_accel", ground_accel)
@@ -540,7 +540,7 @@ func _load_config(movement_path: String = CONFIG_PATH, grenade_path: String = GR
 
 	var gcfg := ConfigFile.new()
 	if gcfg.load(grenade_path) != OK:
-		push_warning("soldier: missing %s, using export defaults" % GRENADE_CONFIG_PATH)
+		push_warning("soldier: missing %s, using export defaults" % grenade_path)
 		return
 	throw_speed = _cfg_float(gcfg, "grenade", "throw_speed", throw_speed)
 	grenade_max = _cfg_int(gcfg, "grenade", "max_grenades", grenade_max)
@@ -571,7 +571,7 @@ static func _cfg_int(cfg: ConfigFile, section: String, key: String, fallback: in
 func _load_spawn_config(path: String = SPAWN_CONFIG_PATH) -> void:
 	var cfg := ConfigFile.new()
 	if cfg.load(path) != OK:
-		push_warning("soldier: missing %s, using export defaults" % SPAWN_CONFIG_PATH)
+		push_warning("soldier: missing %s, using export defaults" % path)
 		return
 	_spawn_delay_ticks = _cfg_int(cfg, "respawn", "delay_ticks", Health.RESPAWN_TICKS)
 	_spawn_points.clear()
