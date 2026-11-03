@@ -160,6 +160,16 @@ func run_tests() -> void:
 	check(AudioServer.get_bus_index("UI") >= 0, "UI bus exists")
 	check(AudioServer.get_bus_send(AudioServer.get_bus_index("SFX")) == "Master", "SFX bus routes to Master")
 	check(AudioServer.get_bus_send(AudioServer.get_bus_index("UI")) == "Master", "UI bus routes to Master")
+	var audio_node: Node = load("res://scripts/audio.gd").new()
+	root.add_child(audio_node)
+	await process_frame
+	await process_frame
+	check(AudioServer.get_bus_index("Music") >= 0, "Music bus exists")
+	check(AudioServer.get_bus_send(AudioServer.get_bus_index("Music")) == "Master", "Music bus routes to Master")
+	check(AudioServer.get_bus_index("SFX") >= 0, "SFX bus exists")
+	check(AudioServer.get_bus_send(AudioServer.get_bus_index("SFX")) == "Master", "SFX bus routes to Master")
+	audio_node.queue_free()
+	await process_frame
 	Sfx.set_bus_volume01("SFX", 0.5)
 	check_close(Sfx.get_bus_volume01("SFX"), 0.5, 0.02, "SFX volume round-trips 0.5")
 	Sfx.set_bus_volume01("UI", 0.25)
