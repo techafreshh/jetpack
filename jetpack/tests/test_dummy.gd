@@ -152,6 +152,15 @@ func run_tests() -> void:
 	var centre_moved := blast_dummy.global_position.distance_to(pre_pos)
 	check(centre_moved > 1.0, "centre blast displaces live dummy (%f px)" % centre_moved)
 	check((blast_dummy.get("velocity") as Vector2).length() > 1.0, "dummy impulse stays readable after ticks")
+	blast_dummy.queue_free()
+	await process_frame
+	var centre_clear := true
+	for n in get_nodes_in_group("damageable"):
+		if not (n is Node2D):
+			continue
+		if (n as Node2D).global_position.distance_to(blast_centre) <= radius:
+			centre_clear = false
+	check(centre_clear, "centre blast probe leaves no damageable near centre")
 	var far_dummy := dummy_packed.instantiate() as StaticBody2D
 	root.add_child(far_dummy)
 	await process_frame
@@ -169,6 +178,8 @@ func run_tests() -> void:
 	await wait_physics(5)
 	check((far_dummy.get("velocity") as Vector2).is_equal_approx(Vector2.ZERO), "out-of-radius velocity stays zero across ticks")
 	check(far_dummy.global_position.is_equal_approx(far_pre), "out-of-radius blast displaces nothing")
+	far_dummy.queue_free()
+	await process_frame
 	# Falloff edge: a near-rim blast still kicks, but less than centre.
 	var edge_dummy := dummy_packed.instantiate() as StaticBody2D
 	root.add_child(edge_dummy)
@@ -188,6 +199,15 @@ func run_tests() -> void:
 	var edge_moved := edge_dummy.global_position.distance_to(edge_pre)
 	check(edge_moved > 1.0, "edge blast displaces dummy (%f px)" % edge_moved)
 	check(edge_moved < centre_moved, "edge blast displaces less than centre (%f < %f)" % [edge_moved, centre_moved])
+	edge_dummy.queue_free()
+	await process_frame
+	var race_clear := true
+	for n in get_nodes_in_group("damageable"):
+		if not (n is Node2D):
+			continue
+		if (n as Node2D).global_position.distance_to(blast_centre) <= radius:
+			race_clear = false
+	check(race_clear, "race blast starts with no damageable near centre")
 
 	# Race backup: detonate itself must skip an externally-flagged-but-grouped
 	# node even though group-leave never ran. The recording double stands in
