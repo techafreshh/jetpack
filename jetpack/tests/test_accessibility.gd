@@ -292,6 +292,11 @@ func run_tests() -> void:
 		check_close(float(cam.get("trauma")), 0.5, 0.0001, "add_trauma banks 0.5")
 		await process_frame
 		check((cam.get("offset") as Vector2).length() > 0.01, "trauma offsets the camera at full shake")
+		var roll_peak := absf(float(cam.get("rotation")))
+		for i in 10:
+			cam.call("add_trauma", 0.0)
+			roll_peak = maxf(roll_peak, absf(float(cam.get("rotation"))))
+		check(roll_peak > 0.0005, "trauma rolls the camera at full shake (peak %f)" % roll_peak)
 		s.call("set_screen_shake", 0.0)
 		await process_frame
 		await process_frame
