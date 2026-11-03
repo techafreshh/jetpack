@@ -177,3 +177,22 @@ func run_tests() -> void:
 	Sfx.set_bus_volume01("SFX", 1.0)
 	Sfx.set_bus_volume01("UI", 1.0)
 	check_close(Sfx.get_bus_volume01("SFX"), 1.0, 0.01, "SFX volume restores to 1.0")
+
+	# (f) Burst fires at blast, not at build: one-shot Burst builds idle, detonate restarts it.
+	var boom_scr := load("res://scripts/fx/explosion.gd") as Script
+	check(boom_scr != null, "explosion.gd loads as Script")
+	if boom_scr != null:
+		var boom := boom_scr.new() as Node2D
+		check(boom != null, "explosion instantiates Node2D")
+		if boom != null:
+			boom.global_position = Vector2(5000, 5000)
+			root.add_child(boom)
+			var burst := boom.get_node_or_null("Burst") as CPUParticles2D
+			check(burst != null, "burst node built under explosion")
+			if burst != null:
+				check(burst.one_shot, "burst is one-shot")
+				check(not burst.emitting, "burst builds idle, fires at detonate (got emitting=true)")
+				boom.call("detonate")
+				check(burst.emitting, "detonate restarts burst (got emitting=false)")
+			boom.queue_free()
+			await process_frame
