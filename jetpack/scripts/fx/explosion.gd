@@ -44,11 +44,11 @@ func detonate() -> void:
 		Sfx.ensure_buses()
 		get_tree().call_group("sfx", "play_sfx", "explosion")
 		get_tree().call_group("camera_shake", "add_shake", 1.0)
-	var fx_tree := get_tree()
+	var fx_tree := get_tree() if is_inside_tree() else null
 	if fx_tree != null:
 		HitStop.trigger(fx_tree)
 	var center := global_position
-	for node in get_tree().get_nodes_in_group("damageable"):
+	for node in fx_tree.get_nodes_in_group("damageable") if fx_tree != null else []:
 		# Normally-killed dummies/soldiers already left damageable, so this
 		# skip is backup for externally-set flags and re-added members.
 		if Health.is_dead(node):
