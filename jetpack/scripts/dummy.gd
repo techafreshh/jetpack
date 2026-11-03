@@ -15,6 +15,10 @@ var hp: float = 100.0
 var is_dead := false
 var flash_t := 0.0
 var corpse_age := 0.0
+## Readable blast impulse state (explosion fallback + grenade-jump tuning).
+var velocity := Vector2.ZERO
+## Linear knockback decay so the kick stays visible a few ticks, then stops.
+const KNOCKBACK_DECAY := 1200.0
 
 var _base_color := Color(1.0, 0.55, 0.15, 1.0)
 
@@ -40,6 +44,21 @@ func _process(delta: float) -> void:
 	flash_t -= delta
 	if flash_t <= 0.0 and not is_dead and _visual != null:
 		_visual.color = _base_color
+
+
+func _physics_process(delta: float) -> void:
+	if is_dead:
+		return
+	if velocity == Vector2.ZERO:
+		return
+	global_position += velocity * delta
+	velocity = velocity.move_toward(Vector2.ZERO, KNOCKBACK_DECAY * delta)
+
+
+func apply_knockback(impulse: Vector2) -> void:
+	if is_dead:
+		return
+	velocity += impulse
 
 
 func take_damage(amount: float) -> void:

@@ -139,11 +139,19 @@ func run_tests() -> void:
 	var radius: float = boom.get("blast_radius")
 	var max_dmg: float = boom.get("max_damage")
 	var hp0 := float(blast_dummy.get("hp"))
+	var pre_pos := blast_dummy.global_position
+	check((blast_dummy.get("velocity") as Vector2).is_equal_approx(Vector2.ZERO), "dummy starts with zero velocity")
 	boom.call("detonate")
 	var hp1 := float(blast_dummy.get("hp"))
 	check(hp1 < hp0, "centre blast damages dummy (hp %f -> %f)" % [hp0, hp1])
 	check_close(hp1, hp0 - max_dmg, 1.0, "centre blast deals full max_damage")
+	var centre_vel := blast_dummy.get("velocity") as Vector2
+	check(centre_vel.length() > 1.0, "centre blast kicks live dummy (speed %f)" % centre_vel.length())
 	boom.queue_free()
+	await wait_physics(5)
+	var centre_moved := blast_dummy.global_position.distance_to(pre_pos)
+	check(centre_moved > 1.0, "centre blast displaces live dummy (%f px)" % centre_moved)
+	check((blast_dummy.get("velocity") as Vector2).length() > 1.0, "dummy impulse stays readable after ticks")
 	var far_dummy := dummy_packed.instantiate() as StaticBody2D
 	root.add_child(far_dummy)
 	await process_frame
@@ -153,9 +161,33 @@ func run_tests() -> void:
 	root.add_child(boom2)
 	boom2.global_position = blast_centre
 	var far_hp0 := float(far_dummy.get("hp"))
+	var far_pre := far_dummy.global_position
 	boom2.call("detonate")
 	check(float(far_dummy.get("hp")) == far_hp0, "out-of-radius blast spares dummy (hp=%f)" % float(far_dummy.get("hp")))
+	check((far_dummy.get("velocity") as Vector2).is_equal_approx(Vector2.ZERO), "out-of-radius blast applies no knockback")
 	boom2.queue_free()
+	await wait_physics(5)
+	check((far_dummy.get("velocity") as Vector2).is_equal_approx(Vector2.ZERO), "out-of-radius velocity stays zero across ticks")
+	check(far_dummy.global_position.is_equal_approx(far_pre), "out-of-radius blast displaces nothing")
+	# Falloff edge: a near-rim blast still kicks, but less than centre.
+	var edge_dummy := dummy_packed.instantiate() as StaticBody2D
+	root.add_child(edge_dummy)
+	await process_frame
+	await process_frame
+	var edge_pre := blast_centre + Vector2(radius - 10.0, 0.0)
+	edge_dummy.global_position = edge_pre
+	var edge_boom := EXPLOSION_SCRIPT.new() as Node2D
+	root.add_child(edge_boom)
+	edge_boom.global_position = blast_centre
+	edge_boom.call("detonate")
+	var edge_vel := edge_dummy.get("velocity") as Vector2
+	check(edge_vel.length() > 1.0, "edge blast still kicks dummy (speed %f)" % edge_vel.length())
+	check(edge_vel.length() < centre_vel.length(), "edge blast kicks less than centre (%f < %f)" % [edge_vel.length(), centre_vel.length()])
+	edge_boom.queue_free()
+	await wait_physics(5)
+	var edge_moved := edge_dummy.global_position.distance_to(edge_pre)
+	check(edge_moved > 1.0, "edge blast displaces dummy (%f px)" % edge_moved)
+	check(edge_moved < centre_moved, "edge blast displaces less than centre (%f < %f)" % [edge_moved, centre_moved])
 
 	# Race backup: detonate itself must skip an externally-flagged-but-grouped
 	# node even though group-leave never ran. The recording double stands in
@@ -258,3 +290,30 @@ func run_tests() -> void:
 	check(corpse_tick >= 1, "short-lifetime corpse freed after its window (tick=%d)" % corpse_tick)
 	check(not is_instance_valid(corpse_dummy), "corpse gone after lifetime")
 	check(corpse_died[0] == 1, "freed corpse emitted died exactly once (got %d)" % corpse_died[0])
+	# Dead dummy ignores knockback: direct and blast leave it frozen, one died.
+	var dead_dummy := dummy_packed.instantiate() as StaticBody2D
+	root.add_child(dead_dummy)
+	await process_frame
+	await process_frame
+	var dead_died := [0]
+	dead_dummy.connect("died", func() -> void: dead_died[0] += 1)
+	for i in 10:
+		dead_dummy.call("take_damage", 12.0)
+	check(bool(dead_dummy.get("is_dead")), "knockback-probe dummy is_dead after lethal damage")
+	check(dead_died[0] == 1, "knockback-probe died emitted once (got %d)" % dead_died[0])
+	dead_dummy.set("velocity", Vector2.ZERO)
+	dead_dummy.call("apply_knockback", Vector2(300.0, -200.0))
+	var dead_vel := dead_dummy.get("velocity") as Vector2
+	check(dead_vel.length() < 0.01, "corpse ignores direct knockback (drift %f)" % dead_vel.length())
+	check(dead_died[0] == 1, "direct corpse knockback emits no second died")
+	var dead_pre := dead_dummy.global_position
+	var dead_boom := EXPLOSION_SCRIPT.new() as Node2D
+	root.add_child(dead_boom)
+	dead_boom.global_position = dead_pre
+	dead_boom.call("detonate")
+	check((dead_dummy.get("velocity") as Vector2).length() < 0.01, "corpse ignores blast knockback")
+	check(dead_died[0] == 1, "blast corpse knockback emits no second died")
+	dead_boom.queue_free()
+	await wait_physics(5)
+	check((dead_dummy.get("velocity") as Vector2).length() < 0.01, "corpse velocity stays frozen across ticks")
+	check(dead_dummy.global_position.is_equal_approx(dead_pre), "corpse never drifts")
