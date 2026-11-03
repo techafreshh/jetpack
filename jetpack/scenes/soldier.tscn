@@ -1,8 +1,9 @@
-[gd_scene load_steps=5 format=3]
+[gd_scene load_steps=6 format=3]
 
 [ext_resource type="Script" path="res://scripts/soldier.gd" id="1"]
 [ext_resource type="Script" path="res://scripts/weapons/weapon.gd" id="2"]
 [ext_resource type="Resource" path="res://resources/weapons/ranger_ar.tres" id="3"]
+[ext_resource type="Script" path="res://scripts/fx/muzzle.gd" id="4"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_body"]
 size = Vector2(28, 64)
@@ -30,6 +31,10 @@ stats = ExtResource("3")
 
 [node name="Muzzle" type="Marker2D" parent="Weapon"]
 position = Vector2(20, -32)
+
+[node name="MuzzleFlash" type="PointLight2D" parent="Weapon/Muzzle"]
+energy = 0.0
+script = ExtResource("4")
 
 [node name="ArcPreview" type="Line2D" parent="."]
 points = PackedVector2Array(0, -32, 10, -32)

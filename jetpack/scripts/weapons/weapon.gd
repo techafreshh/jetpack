@@ -9,6 +9,16 @@ const FX_CONFIG_PATH := "res://resources/config/fx.cfg"
 @export var stats: WeaponResource
 @export var tracer_lifetime := 1.5
 @export var max_tracers := 32
+## Colour-blind palette seam: friendly guns read the orange tracer, enemy
+## guns the blue one, only while colour-blind mode is on; legacy gold holds
+## otherwise. `friendly` defaults true so existing seats keep their look.
+@export var friendly := true
+## Legacy gold shared by every tracer when colour-blind mode is off.
+const TRACER_DEFAULT := Color(1.0, 0.85, 0.4, 1.0)
+## Exact colour-blind enemy blue; probes read this hex verbatim.
+const TRACER_ENEMY_CB := Color8(0, 102, 255)
+## Exact colour-blind friendly orange; probes read this hex verbatim.
+const TRACER_FRIENDLY_CB := Color8(255, 136, 0)
 
 var muzzle_flash: Polygon2D
 var _flash_ticks := 0
@@ -145,6 +155,7 @@ func _aim_point() -> Vector2:
 
 
 func _fire() -> void:
+	_flash_muzzle()
 	if stats == null:
 		return
 	var from := global_position
@@ -190,6 +201,26 @@ func _fire_ray(from: Vector2, dir: Vector2) -> void:
 					if collider != null and collider.has_method("take_damage"):
 						collider.call("take_damage", stats.damage)
 	_spawn_tracer(from, end)
+
+
+## Colour-blind palette lookup: exact blue/orange hexes while the toggle is
+## on, legacy gold for both sides otherwise. Null-safe off-tree/Settings-less.
+func tracer_color_for(wants_friendly: bool) -> Color:
+	if Accessibility.colorblind_on(self):
+		if wants_friendly:
+			return TRACER_FRIENDLY_CB
+		return TRACER_ENEMY_CB
+	return TRACER_DEFAULT
+
+
+## Duck-typed muzzle flash: pops Muzzle/MuzzleFlash when seated, ignored
+## when the child or its flash() seam is absent (older scenes, bare guns).
+func _flash_muzzle() -> void:
+	var flash_node := get_node_or_null("Muzzle/MuzzleFlash")
+	if flash_node == null:
+		flash_node = get_node_or_null("MuzzleFlash")
+	if flash_node != null and flash_node.has_method("flash"):
+		flash_node.call("flash")
 
 
 func _build_muzzle_flash() -> void:
@@ -240,7 +271,7 @@ func _spawn_tracer(a: Vector2, b: Vector2) -> void:
 	var tracer := Line2D.new()
 	tracer.top_level = true
 	tracer.width = 3.0
-	tracer.default_color = Color(1.0, 0.85, 0.4, 1.0)
+	tracer.default_color = tracer_color_for(friendly)
 	add_child(tracer)
 	tracer.global_position = Vector2.ZERO
 	tracer.add_point(a)

@@ -15,6 +15,7 @@ const SETTINGS_PATH := "user://settings.cfg"
 const DEFAULT_MASTER := 1.0
 const DEFAULT_MUSIC := 1.0
 const DEFAULT_SFX := 1.0
+const DEFAULT_SHAKE := 1.0
 const DEFAULT_BINDS := {
 	"move_left": ["A", "Left"],
 	"move_right": ["D", "Right"],
@@ -49,6 +50,7 @@ var settings_path: String = SETTINGS_PATH
 var master_volume := DEFAULT_MASTER
 var music_volume := DEFAULT_MUSIC
 var sfx_volume := DEFAULT_SFX
+var screen_shake := DEFAULT_SHAKE
 var _binds: Dictionary = {}
 var _toggles: Dictionary = {}
 
@@ -73,6 +75,7 @@ func load_settings(path: String = "") -> void:
 	master_volume = _cfg_volume(cfg, "audio", "master_volume", DEFAULT_MASTER)
 	music_volume = _cfg_volume(cfg, "audio", "music_volume", DEFAULT_MUSIC)
 	sfx_volume = _cfg_volume(cfg, "audio", "sfx_volume", DEFAULT_SFX)
+	screen_shake = _cfg_shake(cfg, "accessibility", "screen_shake", DEFAULT_SHAKE)
 	for action in DEFAULT_BINDS:
 		_binds[action] = _cfg_bind(cfg, String(action), _default_bind(String(action)))
 	for toggle in DEFAULT_TOGGLES:
@@ -87,6 +90,7 @@ func save_settings(path: String = "") -> void:
 	cfg.set_value("audio", "master_volume", master_volume)
 	cfg.set_value("audio", "music_volume", music_volume)
 	cfg.set_value("audio", "sfx_volume", sfx_volume)
+	cfg.set_value("accessibility", "screen_shake", screen_shake)
 	for action in DEFAULT_BINDS:
 		var names: PackedStringArray = _binds.get(action, _default_bind(String(action)))
 		cfg.set_value("input", String(action), ", ".join(names))
@@ -133,6 +137,16 @@ func get_music_volume() -> float:
 
 func get_sfx_volume() -> float:
 	return sfx_volume
+
+
+func set_screen_shake(v: float) -> void:
+	screen_shake = _sanitize_shake(v, DEFAULT_SHAKE)
+	toggles_changed.emit()
+	save_settings()
+
+
+func get_screen_shake() -> float:
+	return screen_shake
 
 
 ## Single-key remap: replaces the action's list, applies to InputMap at once.
@@ -197,6 +211,7 @@ func _assign_defaults() -> void:
 	master_volume = DEFAULT_MASTER
 	music_volume = DEFAULT_MUSIC
 	sfx_volume = DEFAULT_SFX
+	screen_shake = DEFAULT_SHAKE
 	_binds.clear()
 	for action in DEFAULT_BINDS:
 		_binds[action] = _default_bind(String(action))
@@ -232,7 +247,27 @@ static func _sanitize_volume(v: float, fallback: float) -> float:
 	return clampf(v, 0.0, 1.0)
 
 
+static func _sanitize_shake(v: float, fallback: float) -> float:
+	if not is_finite(v):
+		push_warning("settings: invalid screen_shake, keeping default")
+		return fallback
+	return clampf(v, 0.0, 1.0)
+
+
 static func _cfg_volume(cfg: ConfigFile, section: String, key: String, fallback: float) -> float:
+	var raw: Variant = cfg.get_value(section, key, fallback)
+	if raw is float:
+		if is_finite(raw):
+			return clampf(raw, 0.0, 1.0)
+		push_warning("settings: invalid %s/%s, keeping default" % [section, key])
+		return fallback
+	if raw is int:
+		return clampf(float(raw), 0.0, 1.0)
+	push_warning("settings: invalid %s/%s, keeping default" % [section, key])
+	return fallback
+
+
+static func _cfg_shake(cfg: ConfigFile, section: String, key: String, fallback: float) -> float:
 	var raw: Variant = cfg.get_value(section, key, fallback)
 	if raw is float:
 		if is_finite(raw):

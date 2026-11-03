@@ -20,7 +20,28 @@ MAX_POST_BODY = 64 * 1024
 
 
 class ProbeHandler(BaseHTTPRequestHandler):
+    def _force_status_line(self) -> None:
+        # BaseHTTPRequestHandler defaults to HTTP/0.9 until the request
+        # line is parsed, and then omits the status line entirely. A raw
+        # socket probe (e.g. bad-encoding path, missing/unsupported
+        # version) would get a body with no status, parsed as "". Force
+        # HTTP/1.0 so every response carries a status line.
+        if getattr(self, "request_version", "HTTP/1.0") == "HTTP/0.9":
+            self.request_version = "HTTP/1.0"
+
+    def send_error(self, code: int, message: str | None = None, explain: str | None = None) -> None:
+        self._force_status_line()
+        # The probe must never see a 5xx: unknown methods (501) and
+        # unsupported versions (505) are rejected as 404 like any
+        # unknown path.
+        if 500 <= code <= 599:
+            code = 404
+            message = "Not found"
+            explain = None
+        super().send_error(code, message, explain)
+
     def _serve_health(self, include_body: bool) -> None:
+        self._force_status_line()
         path = self.path.split("?", 1)[0]
         if path == HEALTH_PATH:
             self.send_response(200)

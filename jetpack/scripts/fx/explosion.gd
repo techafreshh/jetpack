@@ -11,6 +11,9 @@ extends Node2D
 
 var _age := 0.0
 var _detonated := false
+## Tracks whether the Visual already carries the reduced-flash halving so
+## the alpha cut applies exactly once no matter which seam runs first.
+var _softened := false
 
 @onready var _visual: Polygon2D = get_node_or_null("Visual") as Polygon2D
 
@@ -33,6 +36,7 @@ func detonate() -> void:
 	if _detonated:
 		return
 	_detonated = true
+	_apply_flash_softening()
 	var burst := get_node_or_null("Burst") as CPUParticles2D
 	if burst != null:
 		burst.restart()
@@ -74,9 +78,26 @@ func detonate() -> void:
 			node.set("velocity", node.get("velocity") + impulse)
 
 
+## Reduced-flash softening: halves the Visual alpha exactly once while the
+## toggle is on. Never touches damage, knockback, audio, or camera kick.
+func _apply_flash_softening() -> void:
+	if _softened:
+		return
+	if not Accessibility.reduced_flash_on(self):
+		return
+	var visual := _visual if _visual != null else get_node_or_null("Visual") as Polygon2D
+	if visual == null:
+		return
+	var c := visual.color
+	c.a *= 0.5
+	visual.color = c
+	_softened = true
+
+
 func _build_visual() -> void:
 	_build_burst()
 	if _visual != null:
+		_apply_flash_softening()
 		return
 	var ring := Polygon2D.new()
 	ring.name = "Visual"
@@ -88,6 +109,7 @@ func _build_visual() -> void:
 	ring.polygon = pts
 	add_child(ring)
 	_visual = ring
+	_apply_flash_softening()
 
 
 func _build_burst() -> void:
