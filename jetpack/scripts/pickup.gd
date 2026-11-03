@@ -85,7 +85,15 @@ func apply_to(body: Node) -> bool:
 			var cur_max = body.get("grenade_max")
 			if cur_nades != null and cur_max != null and int(cur_nades) >= int(cur_max):
 				return false
-			body.call("add_grenades", 99)
+			var nades_before: Variant = null
+			if cur_nades != null:
+				nades_before = int(cur_nades)
+			var nades_result = body.call("add_grenades", 99)
+			var nades_after = body.get("grenade_count")
+			if nades_after == null and (nades_result is int or nades_result is float):
+				nades_after = int(nades_result)
+			if nades_before != null and nades_after != null and int(nades_after) <= int(nades_before):
+				return false
 			print("PICKUP grenades restocked")
 		_:
 			if wid != "":
