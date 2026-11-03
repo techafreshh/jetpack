@@ -103,3 +103,66 @@ func run_tests() -> void:
 	table.queue_free()
 	host.queue_free()
 	await process_frame
+
+	# (f) Steady-state physics ticks free/recreate no labels.
+	var probe := (packed as PackedScene).instantiate() as Control
+	check(probe != null, "probe widget instantiates")
+	root.add_child(probe)
+	probe.set_scores({"You": 10, "bot_1": 8, "bot_2": 8, "bot_3": 3}, "You")
+	probe.push_kill("You", "bot_1", "Scatter")
+	await process_frame
+	await process_frame
+	var probe_rows := probe.get_node_or_null("Rows") as Node
+	var probe_feed := probe.get_node_or_null("Feed") as Node
+	var probe_hud := probe.get_node_or_null("HudLine") as Label
+	check(probe_rows != null and probe_rows.get_child_count() == 4, "probe renders 4 row labels")
+	check(probe_feed != null and probe_feed.get_child_count() == 1, "probe renders 1 feed label")
+	var row_ids: Array = []
+	for child in probe_rows.get_children():
+		row_ids.append(child.get_instance_id())
+	var feed_ids: Array = []
+	for child in probe_feed.get_children():
+		feed_ids.append(child.get_instance_id())
+	var hud_before := (probe_hud as Label).text
+	await wait_physics(5)
+	var row_ids_after: Array = []
+	for child in probe_rows.get_children():
+		row_ids_after.append(child.get_instance_id())
+	var feed_ids_after: Array = []
+	for child in probe_feed.get_children():
+		feed_ids_after.append(child.get_instance_id())
+	check(row_ids_after == row_ids, "5 idle physics ticks preserve Rows label ids")
+	check(feed_ids_after == feed_ids, "5 idle physics ticks preserve Feed label ids")
+	check((probe.get_node_or_null("HudLine") as Label).text == hud_before, "5 idle physics ticks preserve HudLine text")
+	probe.set_local_id("You")
+	await process_frame
+	await process_frame
+	var row_ids_same: Array = []
+	for child in probe_rows.get_children():
+		row_ids_same.append(child.get_instance_id())
+	check(row_ids_same == row_ids, "unchanged set_local_id is a silent no-op")
+
+	# (g) A score change propagates to the tree within waited ticks.
+	probe.set_entry("bot_1", 12)
+	await wait_physics(2)
+	var first_row := (probe_rows.get_child(0) as Label).text if probe_rows.get_child_count() > 0 else ""
+	check(first_row == "bot_1  12", "score bump re-sorts leader row (got %s)" % first_row)
+	probe.set_entry("You", 11)
+	await wait_physics(2)
+	check((probe.get_node_or_null("HudLine") as Label).text == "You 11 / 25", "local score bump updates HudLine (got %s)" % (probe.get_node_or_null("HudLine") as Label).text)
+
+	# (h) push_kill propagates; an externally deleted row rebuilds next tick.
+	probe.push_kill("bot_2", "You", "Ranger")
+	await wait_physics(2)
+	check(probe_feed.get_child_count() == 2, "push_kill renders second feed label (got %d)" % probe_feed.get_child_count())
+	var newest := (probe_feed.get_child(0) as Label).text if probe_feed.get_child_count() > 0 else ""
+	check(newest.contains("bot_2") and newest.contains("You"), "feed newest shows bot_2 kill (got %s)" % newest)
+	var rows_before := probe_rows.get_child_count()
+	var dropped := probe_rows.get_child(0)
+	probe_rows.remove_child(dropped)
+	dropped.queue_free()
+	await wait_physics(2)
+	check(probe_rows.get_child_count() == rows_before, "externally deleted row rebuilds on next tick (got %d, want %d)" % [probe_rows.get_child_count(), rows_before])
+	check((probe_rows.get_child(0) as Label).text == "bot_1  12", "rebuilt leader row keeps content (got %s)" % (probe_rows.get_child(0) as Label).text)
+	probe.queue_free()
+	await process_frame
