@@ -161,6 +161,7 @@ func run_tests() -> void:
 	var off2 = scr.new()
 	check(off2 != null, "off-tree _fire weapon instantiates")
 	if off2 != null:
+		off2.position = Vector2(173, 89)
 		off2.call("equip", ranger)
 		check(not off2.is_inside_tree(), "off-tree _fire weapon stays off-tree")
 		check(not bool(off2.get("has_aim_override")), "off-tree _fire override off by default")
