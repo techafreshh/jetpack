@@ -176,6 +176,28 @@ func run_tests() -> void:
 			check(p1.x > p0.x, "off-tree _fire heads east")
 		off2.free()
 
+	# Off-tree auto-expiry proof: a short-lived tracer fades on the main
+	# loop without cap eviction or weapon free; a default-lifetime
+	# control stays live to prove no premature free.
+	var off_exp = scr.new()
+	check(off_exp != null, "off-tree expiry weapon instantiates")
+	if off_exp != null:
+		check(not off_exp.is_inside_tree(), "off-tree expiry weapon stays off-tree")
+		off_exp.set("tracer_lifetime", 0.2)
+		off_exp.call("_spawn_tracer", Vector2.ZERO, Vector2(100, 0))
+		check(live_tracers_of(off_exp).size() == 1, "off-tree short-lived tracer starts live (got %d)" % live_tracers_of(off_exp).size())
+		check((off_exp.get("_tracers") as Array).size() == 1, "off-tree short-lived tracer tracked (got %d)" % (off_exp.get("_tracers") as Array).size())
+		var off_ctl = scr.new()
+		off_ctl.call("_spawn_tracer", Vector2.ZERO, Vector2(100, 0))
+		check(live_tracers_of(off_ctl).size() == 1, "default-lifetime control starts live")
+		await wait_physics(30)
+		await process_frame
+		check(live_tracers_of(off_exp).size() == 0, "off-tree tracer auto-expires (got %d)" % live_tracers_of(off_exp).size())
+		check((off_exp.get("_tracers") as Array).size() == 0, "off-tree ledger pruned after expiry (got %d)" % (off_exp.get("_tracers") as Array).size())
+		check(live_tracers_of(off_ctl).size() == 1, "default-lifetime control still live before expiry (got %d)" % live_tracers_of(off_ctl).size())
+		off_exp.free()
+		off_ctl.free()
+
 	# Null-stats guard: a bare weapon's _fire_ray is a silent no-op.
 	var bare = scr.new()
 	check(bare != null, "bare weapon instantiates")
