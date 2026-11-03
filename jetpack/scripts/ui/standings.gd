@@ -23,6 +23,9 @@ var feed_count: int:
 		return feed.feed_count
 
 var _table: Dictionary = {}
+## Fingerprint of the last actually-rendered tree; steady-state physics
+## ticks match it and touch nothing (bot_pilot _last_hp latch idiom).
+var _last_render: String = ""
 
 
 func _init() -> void:
@@ -141,16 +144,56 @@ func hud_standings_string() -> String:
 	return "%s %d / %d" % [local_id, score_for(local_id), target_score]
 
 
+## Comparison string for exactly what _refresh renders: one segment per
+## row in sorted order plus the HUD line, feed texts, target, and local id.
+func _render_fingerprint(rows_data: Array, hud_text: String, feed_texts: Array) -> String:
+	var parts := PackedStringArray()
+	for row in rows_data:
+		var r := row as Dictionary
+		parts.append("%s=%d=%d=%d=%s" % [str(r.get("name", "")), int(r.get("score", 0)), int(r.get("kills", 0)), int(r.get("deaths", 0)), str(bool(r.get("highlight", false)))])
+	parts.append("hud=" + hud_text)
+	for text in feed_texts:
+		parts.append("feed=" + str(text))
+	parts.append("target=%d" % target_score)
+	parts.append("local=" + local_id)
+	return "|".join(parts)
+
+
+## True when the live tree already shows the expected content. A missing
+## Rows/Feed/HudLine node counts as matching so a bare Standings.new()
+## stays crash-free and cheap.
+func _tree_matches(expected_rows: int, expected_feed: int, hud_text: String) -> bool:
+	var line := get_node_or_null("HudLine") as Label
+	if line != null and line.text != hud_text:
+		return false
+	var rows := get_node_or_null("Rows")
+	if rows != null and rows is Container and (rows as Node).get_child_count() != expected_rows:
+		return false
+	var feed_box := get_node_or_null("Feed")
+	if feed_box != null and feed_box is Container and (feed_box as Node).get_child_count() != expected_feed:
+		return false
+	return true
+
+
 func _refresh() -> void:
+	_ensure_feed()
+	var rows_data := get_rows()
+	var hud_text := hud_standings_string()
+	var feed_texts: Array = []
+	for entry in feed.get_entries():
+		feed_texts.append(str((entry as Dictionary)["text"]))
+	var fingerprint := _render_fingerprint(rows_data, hud_text, feed_texts)
+	if fingerprint == _last_render and _tree_matches(rows_data.size(), feed_texts.size(), hud_text):
+		return
 	var line := get_node_or_null("HudLine") as Label
 	if line != null:
-		line.text = hud_standings_string()
+		line.text = hud_text
 	var rows := get_node_or_null("Rows")
 	if rows != null and rows is Container:
 		for child in (rows as Node).get_children():
 			(rows as Node).remove_child(child)
 			child.queue_free()
-		for row in get_rows():
+		for row in rows_data:
 			var label := Label.new()
 			label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 			label.text = "%s  %d" % [str(row["name"]), int(row["score"])]
@@ -159,15 +202,15 @@ func _refresh() -> void:
 			(rows as Node).add_child(label)
 	var feed_box := get_node_or_null("Feed")
 	if feed_box != null and feed_box is Container:
-		_ensure_feed()
 		for child in (feed_box as Node).get_children():
 			(feed_box as Node).remove_child(child)
 			child.queue_free()
-		for entry in feed.get_entries():
+		for text in feed_texts:
 			var label := Label.new()
 			label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-			label.text = str((entry as Dictionary)["text"])
+			label.text = text
 			(feed_box as Node).add_child(label)
+	_last_render = fingerprint
 
 
 func _find_manager() -> Node:
