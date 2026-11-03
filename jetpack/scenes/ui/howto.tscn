@@ -43,6 +43,7 @@ Fire: left mouse button
 Grenade: G
 Reload: R
 Weapons: 1-8
+Gamepad: left stick / DPad to move, right stick to aim, A to fly, RT or RB to fire, LB grenade, B crouch
 
 First to the score target wins. If the clock runs out, the leader wins; a tied clock means sudden death — next kill takes the match."
 autowrap_mode = 2
