@@ -75,9 +75,12 @@ func run_tests() -> void:
 			check_close(float(hold.get("progress")), 0.0, 0.001, "%s progress starts at 0.0" % path)
 		check(hold != null and (hold as Node).process_mode == Node.PROCESS_MODE_ALWAYS, "%s is process_mode ALWAYS" % path)
 		check(hold != null and hold.get_node_or_null("Fill") != null, "%s owns Fill ring" % path)
-	var panel := pause.get_node_or_null("SettingsPanel") as Control
+	var panel := pause.get_node_or_null("SettingsPanel") as CanvasLayer
 	check(panel != null and not panel.visible, "SettingsPanel starts hidden")
 	check(panel != null and panel.get_node_or_null("BackButton") != null, "SettingsPanel exposes BackButton")
+	if panel != null:
+		for child in ["MasterSlider", "MusicSlider", "SfxSlider", "RemapFly", "RemapMoveLeft", "RemapMoveRight", "RemapCrouch", "RemapGrenade", "RemapReload", "ColorblindToggle", "FlashToggle", "AimAssistToggle", "ResetButton", "BackButton"]:
+			check(panel.get_node_or_null(child) != null, "SettingsPanel exposes %s" % child)
 	root.add_child(pause)
 	await process_frame
 	await process_frame
