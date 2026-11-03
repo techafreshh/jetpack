@@ -39,7 +39,7 @@ var countdown_left: float = 3.0
 var time_left: float = 300.0
 var duration: float = 0.0
 var difficulty: String = "standard"
-var bot_count: int = 8
+var bot_count: int = 7
 ## Seat bots from _ready when true; false keeps scene-embedded use inert.
 var auto_seat: bool = false
 var scoreboard: Scoreboard
@@ -330,7 +330,7 @@ func _load_config(path: String = "") -> void:
 	bot_count = _cfg_int(cfg, "match", "bot_count", bot_count)
 	if bot_count < 0:
 		push_warning("matchmanager: invalid match/bot_count, keeping default")
-		bot_count = 8
+		bot_count = 7
 	var raw_diff: Variant = cfg.get_value("match", "difficulty", difficulty)
 	if raw_diff is String and String(raw_diff).to_lower() in ["easy", "standard", "sharp"]:
 		difficulty = String(raw_diff).to_lower()

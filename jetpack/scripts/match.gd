@@ -37,6 +37,8 @@ func _ready() -> void:
 		_manager = MatchManager.new()
 		_manager.name = "MatchManager"
 		add_child(_manager)
+	_manager.ensure_participant("You")
+	_manager.seat_bots()
 	var points := _spawner.spawn_points()
 	var idx := Spawner.choose_spawn(points, [])
 	if idx >= 0 and idx < points.size():
@@ -64,7 +66,7 @@ func _on_soldier_health_changed(hp: float, max_hp: float) -> void:
 
 func _on_soldier_died() -> void:
 	if is_instance_valid(_manager):
-		_manager.record_death("soldier_0")
+		_manager.record_death("You")
 	death_count += 1
 	last_death_cause = str(_soldier.get("last_death_cause"))
 	soldier_died.emit()
