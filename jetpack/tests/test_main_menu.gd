@@ -86,9 +86,12 @@ func run_tests() -> void:
 	# (d) Settings toggles its panel.
 	var menu_d := await fresh_menu()
 	var settings_btn := menu_d.get_node_or_null("Settings") as BaseButton
-	var panel := menu_d.get_node_or_null("SettingsPanel") as Control
+	var panel := menu_d.get_node_or_null("SettingsPanel") as CanvasLayer
 	check(settings_btn != null, "Settings button resolves")
 	check(panel != null and not panel.visible, "SettingsPanel starts hidden")
+	if panel != null:
+		for child in ["MasterSlider", "MusicSlider", "SfxSlider", "RemapFly", "RemapMoveLeft", "RemapMoveRight", "RemapCrouch", "RemapGrenade", "RemapReload", "ColorblindToggle", "FlashToggle", "AimAssistToggle", "ResetButton", "BackButton"]:
+			check(panel.get_node_or_null(child) != null, "SettingsPanel exposes %s" % child)
 	if settings_btn != null and panel != null:
 		settings_btn.emit_signal("pressed")
 		check(panel.visible, "Settings opens SettingsPanel")

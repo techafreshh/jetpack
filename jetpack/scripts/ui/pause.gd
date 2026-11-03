@@ -58,7 +58,7 @@ func resume_game() -> void:
 
 
 func toggle_settings() -> void:
-	var panel := get_node_or_null("SettingsPanel") as Control
+	var panel := get_node_or_null("SettingsPanel") as CanvasLayer
 	if panel == null:
 		return
 	panel.visible = not panel.visible
@@ -134,6 +134,6 @@ func _reset_holds() -> void:
 
 
 func _hide_settings() -> void:
-	var panel := get_node_or_null("SettingsPanel") as Control
+	var panel := get_node_or_null("SettingsPanel") as CanvasLayer
 	if panel != null:
 		panel.visible = false
